@@ -81,7 +81,7 @@ async fn benchmark_transcript_processing() {
             let start = Instant::now();
             let mut embeddings_generated = 0;
             
-            for (chunk_idx, chunk) in chunks.iter().enumerate().take(20) { // Process more chunks per file
+            for (chunk_idx, chunk) in chunks.iter().enumerate() { // Process ALL chunks
                 if chunk.trim().is_empty() {
                     continue;
                 }
