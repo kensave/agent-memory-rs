@@ -1,0 +1,20 @@
+[package]
+name = "memory-rs"
+version = "0.1.0"
+edition = "2021"
+description = "Neural memory systems with surprise-based learning and retention gates"
+authors = ["Kenneth <kenneth@example.com>"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+candle-core = "0.9.1"
+candle-nn = "0.9.1"
+candle-transformers = "0.9.1"
+tokenizers = "0.21.1"
+anyhow = "1.0"
+hf-hub = { version = "0.3.2", features = ["tokio"] }
+tokio = { version = "1.0", features = ["full"] }
+dirs = "5.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
