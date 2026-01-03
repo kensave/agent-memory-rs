@@ -50,7 +50,7 @@ async fn benchmark_transcript_processing() {
         let mut total_time = std::time::Duration::ZERO;
         let mut total_embeddings = 0;
         
-        for (_i, file_path) in files.iter().enumerate().take(3) { // Test first 3 files
+        for (_i, file_path) in files.iter().enumerate() { // Process ALL files
             let filename = file_path.file_name().unwrap().to_string_lossy();
             println!("\nProcessing: {}", filename);
             
@@ -81,7 +81,7 @@ async fn benchmark_transcript_processing() {
             let start = Instant::now();
             let mut embeddings_generated = 0;
             
-            for (chunk_idx, chunk) in chunks.iter().enumerate().take(10) { // Test first 10 chunks
+            for (chunk_idx, chunk) in chunks.iter().enumerate().take(20) { // Process more chunks per file
                 if chunk.trim().is_empty() {
                     continue;
                 }
