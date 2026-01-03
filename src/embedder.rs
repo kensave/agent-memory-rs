@@ -75,27 +75,59 @@ impl FastEmbedder {
     }
     
     fn embed_with_model(&self, text: &str, model: &BertModel, tokenizer: &Tokenizer) -> Result<Vec<f32>> {
-        // Tokenize input
-        let encoding = tokenizer.encode(text, false)
-            .map_err(|e| anyhow::anyhow!("Tokenization failed: {}", e))?;
-        let tokens = encoding.get_ids();
+        // Use batch processing even for single text (more efficient)
+        let batch_result = self.embed_batch_with_model(&[text.to_string()], model, tokenizer)?;
+        Ok(batch_result.into_iter().next().unwrap())
+    }
+    
+    fn embed_batch_with_model(&self, texts: &[String], model: &BertModel, tokenizer: &Tokenizer) -> Result<Vec<Vec<f32>>> {
+        // Tokenize batch (much more efficient than one-by-one)
+        let encodings = tokenizer.encode_batch(texts.to_vec(), true)
+            .map_err(|e| anyhow::anyhow!("Batch tokenization failed: {}", e))?;
         
-        // Create tensors
-        let token_ids = Tensor::new(tokens, &self.device)?.unsqueeze(0)?;
+        // Convert to tensors efficiently
+        let (token_ids, attention_mask) = self.create_batch_tensors(&encodings)?;
         let token_type_ids = token_ids.zeros_like()?;
         
-        // Forward pass
-        let embeddings = model.forward(&token_ids, &token_type_ids, None)?;
+        // Single forward pass for entire batch
+        let embeddings = model.forward(&token_ids, &token_type_ids, Some(&attention_mask))?;
         
-        // Mean pooling
-        let pooled = embeddings.mean(1)?.squeeze(0)?;
+        // Mean pooling across sequence dimension
+        let pooled = embeddings.mean(1)?;
         
-        // Normalize
-        let norm = pooled.sqr()?.sum_all()?.sqrt()?;
-        let normalized = pooled.broadcast_div(&norm)?;
+        // Normalize each embedding
+        let normalized = self.normalize_batch(&pooled)?;
         
-        // Convert to Vec<f32>
-        Ok(normalized.to_vec1()?)
+        // Convert to Vec<Vec<f32>>
+        Ok(normalized.to_vec2()?)
+    }
+    
+    fn create_batch_tensors(&self, encodings: &[tokenizers::Encoding]) -> Result<(Tensor, Tensor)> {
+        let batch_size = encodings.len();
+        let max_len = encodings.iter().map(|e| e.len()).max().unwrap_or(0);
+        
+        let mut token_ids = vec![0u32; batch_size * max_len];
+        let mut attention_mask = vec![0u32; batch_size * max_len];
+        
+        for (i, encoding) in encodings.iter().enumerate() {
+            let ids = encoding.get_ids();
+            let mask = encoding.get_attention_mask();
+            
+            for (j, (&id, &mask_val)) in ids.iter().zip(mask.iter()).enumerate() {
+                token_ids[i * max_len + j] = id;
+                attention_mask[i * max_len + j] = mask_val;
+            }
+        }
+        
+        let token_tensor = Tensor::from_vec(token_ids, (batch_size, max_len), &self.device)?;
+        let mask_tensor = Tensor::from_vec(attention_mask, (batch_size, max_len), &self.device)?;
+        
+        Ok((token_tensor, mask_tensor))
+    }
+    
+    fn normalize_batch(&self, tensor: &Tensor) -> Result<Tensor> {
+        let norms = tensor.sqr()?.sum_keepdim(1)?.sqrt()?;
+        Ok(tensor.broadcast_div(&norms)?)
     }
     
     fn get_bert_config(&self) -> BertConfig {

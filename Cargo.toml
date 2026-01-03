@@ -12,7 +12,7 @@ candle-nn = "0.9.1"
 candle-transformers = "0.9.1"
 tokenizers = "0.21.1"
 anyhow = "1.0"
-hf-hub = { version = "0.3.2", features = ["tokio"] }
+hf-hub = { version = "0.4.2", default-features = false, features = ["rustls-tls", "tokio", "ureq"] }
 tokio = { version = "1.0", features = ["full"] }
 dirs = "5.0"
 
