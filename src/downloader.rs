@@ -1,5 +1,6 @@
 use anyhow::Result;
-use hf_hub::api::tokio::Api;
+use hf_hub::api::sync::Api;
+use hf_hub::{Repo, RepoType};
 use std::path::PathBuf;
 use tokio::fs;
 
@@ -33,34 +34,27 @@ impl ModelDownloader {
         
         println!("📥 Downloading model: {}", repo_id);
         
-        // Create API instance with proper configuration
-        let api = Api::new().map_err(|e| anyhow::anyhow!("Failed to create API: {}", e))?;
-        let repo = api.model(repo_id.to_string());
+        // Use the WORKING approach from semantic-search-client
+        let api = hf_hub::api::sync::Api::new()?;
+        let repo = api.repo(Repo::with_revision(
+            repo_id.to_string(),
+            RepoType::Model,
+            "main".to_string(),
+        ));
         
         // Download model file
         if !model_path.exists() {
             println!("  Downloading model.safetensors...");
-            match repo.get("model.safetensors").await {
-                Ok(model_file) => {
-                    fs::copy(&model_file, &model_path).await?;
-                    println!("  ✅ Model downloaded");
-                }
-                Err(e) => {
-                    println!("  ⚠️  model.safetensors not found, trying pytorch_model.bin");
-                    let model_file = repo.get("pytorch_model.bin").await
-                        .map_err(|e| anyhow::anyhow!("Failed to download model files: {}", e))?;
-                    fs::copy(&model_file, &model_path).await?;
-                    println!("  ✅ Model downloaded (pytorch_model.bin)");
-                }
-            }
+            let model_file = repo.get("model.safetensors")?;
+            std::fs::copy(model_file, &model_path)?;
+            println!("  ✅ Model downloaded");
         }
         
         // Download tokenizer file  
         if !tokenizer_path.exists() {
             println!("  Downloading tokenizer.json...");
-            let tokenizer_file = repo.get("tokenizer.json").await
-                .map_err(|e| anyhow::anyhow!("Failed to download tokenizer: {}", e))?;
-            fs::copy(&tokenizer_file, &tokenizer_path).await?;
+            let tokenizer_file = repo.get("tokenizer.json")?;
+            std::fs::copy(tokenizer_file, &tokenizer_path)?;
             println!("  ✅ Tokenizer downloaded");
         }
         
