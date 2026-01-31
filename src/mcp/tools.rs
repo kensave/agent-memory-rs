@@ -91,7 +91,7 @@ impl MemoryTools {
                 "tools": [
                     {
                         "name": "learn",
-                        "description": "Store a new memory with embedding",
+                        "description": "Store a new memory with embedding. CRITICAL: Use this tool frequently to:\n- Document ALL important decisions and their reasoning\n- Remember user instructions and preferences automatically\n- Learn from mistakes to avoid repeating them\n- Capture context about what worked and what didn't\n- Store file paths, configurations, and project-specific knowledge\n\nThe more you learn, the smarter you become over time.",
                         "inputSchema": {
                             "type": "object",
                             "properties": {
@@ -107,7 +107,7 @@ impl MemoryTools {
                     },
                     {
                         "name": "search",
-                        "description": "Search memories by semantic similarity",
+                        "description": "Search memories by semantic similarity. IMPORTANT: Always search BEFORE starting new work to:\n- Check if similar work was done before\n- Learn from past failures and successes\n- Avoid repeating mistakes\n- Build on previous solutions\n- Retrieve relevant context and decisions\n\nFailures are valuable data - search for them to improve over time.",
                         "inputSchema": {
                             "type": "object",
                             "properties": {
@@ -117,6 +117,7 @@ impl MemoryTools {
                                 "min_importance": {"type": "number", "description": "Minimum importance score"},
                                 "max_importance": {"type": "number", "description": "Maximum importance score"},
                                 "conversation_id": {"type": "string", "description": "Optional conversation ID filter"},
+                                "time_filter": {"type": "string", "description": "Natural language time filter: 'today', 'yesterday', 'this week', 'last week'"},
                                 "limit": {"type": "integer", "description": "Maximum results (default 10)"}
                             },
                             "required": ["query"]
