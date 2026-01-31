@@ -2,8 +2,8 @@ use anyhow::Result;
 use candle_core::{Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::models::bert::{BertModel, Config as BertConfig, DTYPE};
-use tokenizers::Tokenizer;
-use crate::models::{ModelType, QuantizationType};
+use tokenizers::{PaddingParams, PaddingStrategy, Tokenizer};
+use crate::models::ModelType;
 use crate::downloader::ModelDownloader;
 
 pub struct FastEmbedder {
@@ -11,7 +11,6 @@ pub struct FastEmbedder {
     tokenizer: Option<Tokenizer>,
     device: Device,
     model_type: ModelType,
-    quantization: QuantizationType,
 }
 
 impl FastEmbedder {
@@ -19,9 +18,8 @@ impl FastEmbedder {
         Ok(Self {
             model: None,
             tokenizer: None,
-            device: Device::Cpu,
+            device: get_best_device(),
             model_type: ModelType::MiniLM,
-            quantization: QuantizationType::None,
         })
     }
     
@@ -29,19 +27,8 @@ impl FastEmbedder {
         Ok(Self {
             model: None,
             tokenizer: None,
-            device: Device::Cpu,
+            device: get_best_device(),
             model_type,
-            quantization: QuantizationType::None,
-        })
-    }
-    
-    pub fn with_quantization(quantization: QuantizationType) -> Result<Self> {
-        Ok(Self {
-            model: None,
-            tokenizer: None,
-            device: Device::Cpu,
-            model_type: ModelType::MiniLM,
-            quantization,
         })
     }
     
@@ -49,60 +36,64 @@ impl FastEmbedder {
         let downloader = ModelDownloader::new()?;
         let (model_path, tokenizer_path) = downloader.download_model(self.model_type.repo_id()).await?;
         
-        // Load tokenizer
-        self.tokenizer = Some(Tokenizer::from_file(&tokenizer_path)
-            .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {}", e))?);
+        // Load and configure tokenizer with padding (done once, not per-batch)
+        let mut tokenizer = Tokenizer::from_file(&tokenizer_path)
+            .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {}", e))?;
+        tokenizer.with_padding(Some(PaddingParams {
+            strategy: PaddingStrategy::BatchLongest,
+            ..Default::default()
+        }));
+        self.tokenizer = Some(tokenizer);
         
         // Load model
         let config = self.get_bert_config();
         let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[&model_path], DTYPE, &self.device)? };
         self.model = Some(BertModel::load(vb, &config)?);
         
-        println!("Loaded model: {:?}", self.model_type);
+        println!("Loaded model: {:?} on {:?}", self.model_type, self.device);
         Ok(())
     }
     
     pub fn embed(&self, text: &str) -> Result<Vec<f32>> {
         match (&self.model, &self.tokenizer) {
             (Some(model), Some(tokenizer)) => {
-                self.embed_with_model(text, model, tokenizer)
+                self.embed_batch_internal(&[text], model, tokenizer)?
+                    .into_iter().next().ok_or_else(|| anyhow::anyhow!("No embedding"))
             }
-            _ => {
-                // Fallback to mock implementation if model not loaded
-                Ok(self.generate_mock_embedding(self.model_type.dimensions()))
-            }
+            _ => Ok(self.generate_mock_embedding(self.model_type.dimensions())),
         }
     }
     
-    fn embed_with_model(&self, text: &str, model: &BertModel, tokenizer: &Tokenizer) -> Result<Vec<f32>> {
-        // Use batch processing even for single text (more efficient)
-        let batch_result = self.embed_batch_with_model(&[text.to_string()], model, tokenizer)?;
-        Ok(batch_result.into_iter().next().unwrap())
+    pub fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+        match (&self.model, &self.tokenizer) {
+            (Some(model), Some(tokenizer)) => self.embed_batch_internal(texts, model, tokenizer),
+            _ => Ok(texts.iter().map(|_| self.generate_mock_embedding(self.model_type.dimensions())).collect()),
+        }
     }
     
-    fn embed_batch_with_model(&self, texts: &[String], model: &BertModel, tokenizer: &Tokenizer) -> Result<Vec<Vec<f32>>> {
-        // Tokenize batch (much more efficient than one-by-one)
-        let encodings = tokenizer.encode_batch(texts.to_vec(), true)
-            .map_err(|e| anyhow::anyhow!("Batch tokenization failed: {}", e))?;
+    fn embed_batch_internal(&self, texts: &[&str], model: &BertModel, tokenizer: &Tokenizer) -> Result<Vec<Vec<f32>>> {
+        if texts.is_empty() {
+            return Ok(vec![]);
+        }
         
-        // Convert to tensors efficiently
-        let (token_ids, attention_mask) = self.create_batch_tensors(&encodings)?;
+        let encodings = tokenizer.encode_batch(texts.to_vec(), true)
+            .map_err(|e| anyhow::anyhow!("Tokenization failed: {}", e))?;
+        
+        // Build tensors directly (no create-then-stack)
+        let (token_ids, attention_mask) = self.create_batch_tensors_direct(&encodings)?;
         let token_type_ids = token_ids.zeros_like()?;
         
-        // Single forward pass for entire batch
+        // Single forward pass
         let embeddings = model.forward(&token_ids, &token_type_ids, Some(&attention_mask))?;
         
-        // Mean pooling across sequence dimension
+        // Mean pooling + normalize
         let pooled = embeddings.mean(1)?;
+        let normalized = normalize_l2(&pooled)?;
         
-        // Normalize each embedding
-        let normalized = self.normalize_batch(&pooled)?;
-        
-        // Convert to Vec<Vec<f32>>
         Ok(normalized.to_vec2()?)
     }
     
-    fn create_batch_tensors(&self, encodings: &[tokenizers::Encoding]) -> Result<(Tensor, Tensor)> {
+    fn create_batch_tensors_direct(&self, encodings: &[tokenizers::Encoding]) -> Result<(Tensor, Tensor)> {
         let batch_size = encodings.len();
         let max_len = encodings.iter().map(|e| e.len()).max().unwrap_or(0);
         
@@ -110,82 +101,62 @@ impl FastEmbedder {
         let mut attention_mask = vec![0u32; batch_size * max_len];
         
         for (i, encoding) in encodings.iter().enumerate() {
-            let ids = encoding.get_ids();
-            let mask = encoding.get_attention_mask();
-            
-            for (j, (&id, &mask_val)) in ids.iter().zip(mask.iter()).enumerate() {
-                token_ids[i * max_len + j] = id;
-                attention_mask[i * max_len + j] = mask_val;
-            }
+            let offset = i * max_len;
+            token_ids[offset..offset + encoding.get_ids().len()].copy_from_slice(encoding.get_ids());
+            attention_mask[offset..offset + encoding.get_attention_mask().len()].copy_from_slice(encoding.get_attention_mask());
         }
         
-        let token_tensor = Tensor::from_vec(token_ids, (batch_size, max_len), &self.device)?;
-        let mask_tensor = Tensor::from_vec(attention_mask, (batch_size, max_len), &self.device)?;
-        
-        Ok((token_tensor, mask_tensor))
-    }
-    
-    fn normalize_batch(&self, tensor: &Tensor) -> Result<Tensor> {
-        let norms = tensor.sqr()?.sum_keepdim(1)?.sqrt()?;
-        Ok(tensor.broadcast_div(&norms)?)
+        Ok((
+            Tensor::from_vec(token_ids, (batch_size, max_len), &self.device)?,
+            Tensor::from_vec(attention_mask, (batch_size, max_len), &self.device)?,
+        ))
     }
     
     fn get_bert_config(&self) -> BertConfig {
         match self.model_type {
             ModelType::MiniLM => BertConfig {
-                vocab_size: 30522,
-                hidden_size: 384,
-                num_hidden_layers: 6,
-                num_attention_heads: 12,
-                intermediate_size: 1536,
-                hidden_act: candle_transformers::models::bert::HiddenAct::Gelu,
-                hidden_dropout_prob: 0.0,
-                max_position_embeddings: 512,
-                type_vocab_size: 2,
-                initializer_range: 0.02,
-                layer_norm_eps: 1e-12,
-                pad_token_id: 0,
+                vocab_size: 30522, hidden_size: 384, num_hidden_layers: 6, num_attention_heads: 12,
+                intermediate_size: 1536, hidden_act: candle_transformers::models::bert::HiddenAct::Gelu,
+                hidden_dropout_prob: 0.0, max_position_embeddings: 512, type_vocab_size: 2,
+                initializer_range: 0.02, layer_norm_eps: 1e-12, pad_token_id: 0,
                 position_embedding_type: candle_transformers::models::bert::PositionEmbeddingType::Absolute,
-                use_cache: false,
-                classifier_dropout: None,
-                model_type: Some("bert".to_string()),
+                use_cache: false, classifier_dropout: None, model_type: Some("bert".to_string()),
             },
             ModelType::Nomic => BertConfig {
-                vocab_size: 30522,
-                hidden_size: 768,
-                num_hidden_layers: 12,
-                num_attention_heads: 12,
-                intermediate_size: 3072,
-                hidden_act: candle_transformers::models::bert::HiddenAct::Gelu,
-                hidden_dropout_prob: 0.0,
-                max_position_embeddings: 8192,
-                type_vocab_size: 2,
-                initializer_range: 0.02,
-                layer_norm_eps: 1e-12,
-                pad_token_id: 0,
+                vocab_size: 30528, hidden_size: 768, num_hidden_layers: 12, num_attention_heads: 12,
+                intermediate_size: 3072, hidden_act: candle_transformers::models::bert::HiddenAct::Gelu,
+                hidden_dropout_prob: 0.0, max_position_embeddings: 8192, type_vocab_size: 2,
+                initializer_range: 0.02, layer_norm_eps: 1e-12, pad_token_id: 0,
                 position_embedding_type: candle_transformers::models::bert::PositionEmbeddingType::Absolute,
-                use_cache: false,
-                classifier_dropout: None,
-                model_type: Some("bert".to_string()),
+                use_cache: false, classifier_dropout: None, model_type: Some("bert".to_string()),
+            },
+            ModelType::BgeSmall => BertConfig {
+                vocab_size: 30522, hidden_size: 384, num_hidden_layers: 12, num_attention_heads: 12,
+                intermediate_size: 1536, hidden_act: candle_transformers::models::bert::HiddenAct::Gelu,
+                hidden_dropout_prob: 0.1, max_position_embeddings: 512, type_vocab_size: 2,
+                initializer_range: 0.02, layer_norm_eps: 1e-12, pad_token_id: 0,
+                position_embedding_type: candle_transformers::models::bert::PositionEmbeddingType::Absolute,
+                use_cache: false, classifier_dropout: None, model_type: Some("bert".to_string()),
             },
         }
     }
     
     fn generate_mock_embedding(&self, dims: usize) -> Vec<f32> {
-        // Generate normalized random-like embeddings for testing
-        let mut embedding = vec![0.0; dims];
-        for (i, val) in embedding.iter_mut().enumerate() {
-            *val = ((i as f32 * 0.1) % 1.0) * 2.0 - 1.0; // Values between -1 and 1
-        }
-        
-        // Normalize the embedding
+        let mut embedding: Vec<f32> = (0..dims).map(|i| ((i as f32 * 0.1) % 1.0) * 2.0 - 1.0).collect();
         let norm: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
-        if norm > 0.0 {
-            for val in &mut embedding {
-                *val /= norm;
-            }
-        }
-        
+        if norm > 0.0 { embedding.iter_mut().for_each(|v| *v /= norm); }
         embedding
     }
+}
+
+fn get_best_device() -> Device {
+    #[cfg(feature = "metal")]
+    if let Ok(device) = Device::new_metal(0) { return device; }
+    #[cfg(feature = "cuda")]
+    if let Ok(device) = Device::new_cuda(0) { return device; }
+    Device::Cpu
+}
+
+fn normalize_l2(tensor: &Tensor) -> Result<Tensor> {
+    Ok(tensor.broadcast_div(&tensor.sqr()?.sum_keepdim(1)?.sqrt()?)?)
 }

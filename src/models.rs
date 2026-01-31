@@ -2,6 +2,7 @@
 pub enum ModelType {
     MiniLM,
     Nomic,
+    BgeSmall,
 }
 
 impl ModelType {
@@ -9,6 +10,7 @@ impl ModelType {
         match self {
             Self::MiniLM => "sentence-transformers/all-MiniLM-L6-v2",
             Self::Nomic => "nomic-ai/nomic-embed-text-v1",
+            Self::BgeSmall => "BAAI/bge-small-en-v1.5",
         }
     }
     
@@ -16,6 +18,7 @@ impl ModelType {
         match self {
             Self::MiniLM => 384,
             Self::Nomic => 768,
+            Self::BgeSmall => 384,
         }
     }
 }

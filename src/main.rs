@@ -17,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
     println!("📊 Mock Implementation Benchmark:");
     for model_type in [ModelType::MiniLM, ModelType::Nomic] {
         println!("\n{:?} Model:", model_type);
-        let embedder = FastEmbedder::with_model(model_type)?;
+        let mut embedder = FastEmbedder::with_model(model_type)?;
         
         for text in &test_texts {
             let start = Instant::now();

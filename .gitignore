@@ -6,8 +6,12 @@ Cargo.lock
 /models/
 /cache/
 *.safetensors
-*.json
 *.bin
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
 
 # OS
 .DS_Store

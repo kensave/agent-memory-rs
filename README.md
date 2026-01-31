@@ -1,81 +1,433 @@
-# Embedding Benchmark - TDD Implementation
+# Memory-RS: Persistent Memory System with MCP Server
 
-A minimal, test-driven implementation of embedding models using Candle for the memory-rs framework.
+A high-performance, SQLite-backed persistent memory system with semantic search capabilities, exposed via the Model Context Protocol (MCP). Built in Rust for speed, safety, and reliability.
 
 ## 🎯 Features
 
-- **TDD Approach**: Tests written first, implementation follows
-- **Multiple Models**: Support for MiniLM and Nomic Embed models
-- **Quantization**: Int8 quantization for memory efficiency
-- **Async Downloads**: Automatic model downloading from HuggingFace Hub
-- **Fallback System**: Mock embeddings when real models unavailable
-- **Performance Benchmarks**: Comprehensive timing and memory analysis
+- **Persistent Storage**: SQLite database with sqlite-vec extension for vector embeddings
+- **Semantic Search**: Hybrid search combining cosine similarity with metadata filtering
+- **MCP Protocol**: JSON-RPC 2.0 over stdio for easy integration with AI assistants
+- **Workspace Isolation**: Multi-database support with per-workspace memory isolation
+- **Agent Scoping**: Shared workspace memories + optional private agent memories
+- **Rich Metadata**: Tags, importance scores, conversation tracking, user feedback
+- **Embedding Models**: Support for MiniLM, Nomic, and BGE-small models
+- **Test-Driven**: 28 comprehensive tests ensuring reliability
 
 ## 🚀 Quick Start
 
+### Installation
+
 ```bash
-# Run all tests
-cargo test
+git clone https://github.com/yourusername/memory-rs
+cd memory-rs
+cargo build --release
 
-# Run benchmark
-cargo run
-
-# Run specific test suite
-cargo test --test benchmark_test -- --nocapture
+# Install binary to PATH
+cargo install --path .
 ```
 
-## 📊 Current Results
+### MCP Configuration
 
-### Mock Implementation (Always Available)
-- **MiniLM**: 384 dimensions, ~20μs processing
-- **Nomic**: 768 dimensions, ~20μs processing
-- **Quantization**: 4x memory reduction (1536 → 384 bytes)
+Add to your AI agent's MCP configuration (e.g., Claude Desktop `config.json`):
 
-### Model Comparison
+```json
+{
+  "mcpServers": {
+    "memory-rs": {
+      "command": "memory-rs",
+      "args": ["--scope", "workspace"]
+    }
+  }
+}
+```
+
+**Scope Options:**
+
+```json
+// Workspace-only (default) - memories isolated per project
+"args": ["--scope", "workspace"]
+
+// Global - access memories across all workspaces
+"args": ["--scope", "global"]
+
+// Workspace-first - search workspace, fallback to global
+"args": ["--scope", "workspace-first"]
+
+// Custom workspace name
+"args": ["my-project-name"]
+```
+
+**Full Example:**
+
+```json
+{
+  "mcpServers": {
+    "memory-rs": {
+      "command": "memory-rs",
+      "args": ["--scope", "workspace-first", "my-project"]
+    }
+  }
+}
+```
+
+### Running Manually
+
+```bash
+# Start server for default workspace
+cargo run --bin mcp_server
+
+# Start server for specific workspace
+cargo run --bin mcp_server my-project
+
+# With scope configuration
+cargo run --bin mcp_server -- --scope global
+```
+
+### Basic Usage
+
+The MCP server communicates via stdio using JSON-RPC 2.0. Here's how to interact with it:
+
+#### Learn (Store a Memory)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "learn",
+    "arguments": {
+      "text": "Rust is a systems programming language focused on safety and performance",
+      "workspace_id": 1,
+      "importance_score": 0.8,
+      "tags": "rust,programming"
+    }
+  }
+}
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "memory_id": 42,
+    "status": "success"
+  }
+}
+```
+
+#### Search (Query Memories)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "search",
+    "arguments": {
+      "query": "programming languages",
+      "workspace_id": 1,
+      "limit": 5
+    }
+  }
+}
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "results": [
+      {
+        "memory_id": 42,
+        "text": "Rust is a systems programming language...",
+        "similarity_score": 0.92,
+        "combined_score": 0.88,
+        "importance_score": 0.8,
+        "tags": "rust,programming",
+        "created_at": "2026-01-30T22:00:00Z"
+      }
+    ],
+    "count": 1
+  }
+}
+```
+
+## 📚 Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         CLI Tool                             │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ stdio (JSON-RPC 2.0)
+┌──────────────────────────▼──────────────────────────────────┐
+│                      MCP Server                              │
+│  ┌────────────────┐  ┌────────────────┐                     │
+│  │  Learn Tool    │  │  Search Tool   │                     │
+│  └────────┬───────┘  └────────┬───────┘                     │
+└───────────┼──────────────────┼─────────────────────────────┘
+            │                  │
+┌───────────▼──────────────────▼─────────────────────────────┐
+│                    Memory System                             │
+│  ┌──────────────────┐  ┌──────────────────┐                │
+│  │  FastEmbedder    │  │  Memory Store    │                │
+│  │  (MiniLM/Nomic)  │  │  (SQLite+vec)    │                │
+│  └──────────────────┘  └──────────────────┘                │
+└─────────────────────────────────────────────────────────────┘
+            │                  │
+┌───────────▼──────────────────▼─────────────────────────────┐
+│              Workspace Manager                               │
+│  ~/.memory-rs/workspaces/                                    │
+│    ├── project-a/memory.db                                   │
+│    ├── project-b/memory.db                                   │
+│    └── project-c/memory.db                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Core Components
+
+1. **Storage Layer** (`src/storage/`)
+   - `schema.rs`: Database schema with sqlite-vec integration
+   - `memory_store.rs`: CRUD operations and vector search
+
+2. **Memory System** (`src/memory_system.rs`)
+   - High-level API combining embedder and storage
+   - Atomic learn and search operations
+
+3. **MCP Server** (`src/mcp/`)
+   - `server.rs`: JSON-RPC 2.0 stdio transport
+   - `tools.rs`: Learn and Search tool implementations
+
+4. **Workspace Manager** (`src/workspace.rs`)
+   - Multi-database support
+   - Workspace isolation and management
+
+5. **Embedder** (`src/embedder.rs`)
+   - FastEmbedder with multiple model support
+   - Mock fallback for testing
+
+## 🔧 Configuration
+
+### Embedding Models
+
+Choose your embedding model based on your needs:
+
+| Model | Dimensions | Speed | Quality |
+|-------|-----------|-------|---------|
+| MiniLM | 384 | Fast | Good |
+| BGE-small | 384 | Medium | Better |
+| Nomic | 768 | Slower | Best |
+
+Configure in code:
 ```rust
-let embedder = FastEmbedder::with_model(ModelType::Nomic)?;
-let embedding = embedder.embed("test text")?;
-assert_eq!(embedding.len(), 768);
+use memory_rs::{WorkspaceManager, ModelType};
+
+let manager = WorkspaceManager::new(ModelType::BgeSmall)?;
 ```
 
-## 🧪 Test Structure
+### Workspace Management
 
+Workspaces are stored in `~/.memory-rs/workspaces/` by default:
+
+```rust
+use memory_rs::WorkspaceManager;
+
+let manager = WorkspaceManager::new(ModelType::MiniLM)?;
+
+// Create or get workspace
+let system = manager.get_or_create_workspace("my-project")?;
+
+// List all workspaces
+let workspaces = manager.list_workspaces()?;
+
+// Delete workspace
+manager.delete_workspace("old-project")?;
 ```
-tests/
-├── benchmark_test.rs       # Basic functionality tests
-├── model_comparison_test.rs # Performance comparison
-├── performance_test.rs     # Quantization benchmarks
-└── real_model_test.rs     # Real model loading tests
+
+## 🧪 Testing
+
+Run all tests:
+```bash
+cargo test
 ```
 
-## 🔧 Architecture
+Run specific test suites:
+```bash
+# Storage tests
+cargo test --lib storage
 
-- **FastEmbedder**: Main embedding interface
-- **ModelDownloader**: HuggingFace Hub integration
-- **ModelType**: Enum for different model configurations
-- **QuantizationType**: Memory optimization options
+# MCP server tests
+cargo test --lib mcp
 
-## 📈 Integration Ready
+# Workspace tests
+cargo test --lib workspace
+```
 
-This implementation provides the foundation for:
-1. **Memory-RS Framework**: Neural memory with embeddings
-2. **RAG Replacement**: Drop-in embedding generation
-3. **Client Optimization**: CPU-focused, quantized models
-4. **Real-time Learning**: Surprise-based memory updates
+## 📊 Database Schema
 
-## 🎯 Next Steps
+### Tables
 
-1. Fix HuggingFace Hub authentication for real model downloads
-2. Add quantization implementation for Int8 models
-3. Integrate with Titans/Miras memory frameworks
-4. Benchmark against existing semantic-search-client
-5. Add more embedding models (BGE, E5, etc.)
+**workspaces**
+- `id`: Primary key
+- `name`: Workspace name (unique)
+- `path`: Filesystem path
+- `created_at`: Timestamp
 
-## 🧪 TDD Workflow
+**agents**
+- `id`: Primary key
+- `workspace_id`: Foreign key to workspaces
+- `name`: Agent name
+- `created_at`: Timestamp
 
-1. **Red**: Write failing test
-2. **Green**: Implement minimal code to pass
-3. **Refactor**: Optimize and improve
-4. **Repeat**: Add next feature
+**memories**
+- `id`: Primary key
+- `workspace_id`: Foreign key to workspaces
+- `agent_id`: Optional foreign key to agents
+- `text`: Memory content
+- `tags`: Comma-separated tags
+- `importance_score`: Float 0-1
+- `access_count`: Usage tracking
+- `last_accessed`: Timestamp
+- `conversation_id`: Optional conversation grouping
+- `parent_memory_id`: Optional memory hierarchy
+- `user_feedback`: Optional feedback text
+- `created_at`, `updated_at`: Timestamps
 
-All tests pass with mock implementations, ready for real model integration.
+**vec0** (virtual table)
+- `memory_id`: Foreign key to memories
+- `embedding`: Float vector (384 or 768 dimensions)
+
+### Indexes
+
+- `idx_memories_workspace`: Fast workspace filtering
+- `idx_memories_agent`: Fast agent filtering
+- `idx_memories_importance`: Importance-based queries
+- `idx_memories_created`: Temporal queries
+- `idx_memories_conversation`: Conversation grouping
+
+## 🔍 Search Capabilities
+
+### Hybrid Search
+
+Combines semantic similarity (70%) with importance score (30%):
+
+```rust
+use memory_rs::storage::SearchFilters;
+
+let filters = SearchFilters {
+    workspace_id: Some(1),
+    agent_id: Some(5),
+    min_importance: Some(0.5),
+    max_importance: Some(1.0),
+    conversation_id: Some("conv-123".to_string()),
+    ..Default::default()
+};
+
+let results = system.search("query text", &filters, 10)?;
+```
+
+### Filtering Options
+
+- **workspace_id**: Limit to specific workspace
+- **agent_id**: Limit to specific agent
+- **min_importance / max_importance**: Importance range
+- **created_after / created_before**: Date range
+- **conversation_id**: Conversation grouping
+- **tags**: Tag-based filtering (future)
+
+## 🚦 MCP Protocol
+
+### Available Methods
+
+1. **initialize**: Server initialization
+2. **tools/list**: List available tools
+3. **tools/call**: Execute a tool
+4. **learn**: Store a memory (via tools/call)
+5. **search**: Query memories (via tools/call)
+
+### Tool Schemas
+
+#### Learn Tool
+
+**Input Schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "text": {"type": "string", "description": "The text to remember"},
+    "workspace_id": {"type": "integer", "description": "Workspace ID"},
+    "agent_id": {"type": "integer", "description": "Optional agent ID"},
+    "tags": {"type": "string", "description": "Optional comma-separated tags"},
+    "importance_score": {"type": "number", "description": "Importance score 0-1"},
+    "conversation_id": {"type": "string", "description": "Optional conversation ID"}
+  },
+  "required": ["text", "workspace_id"]
+}
+```
+
+#### Search Tool
+
+**Input Schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {"type": "string", "description": "Search query"},
+    "workspace_id": {"type": "integer", "description": "Optional workspace ID filter"},
+    "agent_id": {"type": "integer", "description": "Optional agent ID filter"},
+    "min_importance": {"type": "number", "description": "Minimum importance score"},
+    "max_importance": {"type": "number", "description": "Maximum importance score"},
+    "conversation_id": {"type": "string", "description": "Optional conversation ID filter"},
+    "limit": {"type": "integer", "description": "Maximum results (default 10, max 100)"}
+  },
+  "required": ["query"]
+}
+```
+
+## 🎓 Examples
+
+See `examples/` directory for complete examples:
+
+- `mcp_server.rs`: Full MCP server implementation
+- More examples coming soon!
+
+## 📈 Performance
+
+- **Storage**: SQLite with sqlite-vec for efficient vector operations
+- **Embedding**: ~300ms per embedding with real models, ~20μs with mock
+- **Search**: Sub-second for <10K memories, optimized for 100K+ scale
+- **Memory**: Efficient storage with optional quantization support
+
+## 🤝 Contributing
+
+Contributions welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass: `cargo test`
+5. Submit a pull request
+
+## 📝 License
+
+MIT OR Apache-2.0
+
+## 🙏 Acknowledgments
+
+- [sqlite-vec](https://github.com/asg017/sqlite-vec) for vector search in SQLite
+- [Candle](https://github.com/huggingface/candle) for ML inference
+- Model Context Protocol by Anthropic
+
+## 📞 Support
+
+- Issues: [GitHub Issues](https://github.com/yourusername/memory-rs/issues)
+- Discussions: [GitHub Discussions](https://github.com/yourusername/memory-rs/discussions)
+
+---
+
+Built with ❤️ in Rust
