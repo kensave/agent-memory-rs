@@ -1,6 +1,6 @@
-use memory_rs::services::hybrid_retrieval::HybridRetrievalEngine;
-use memory_rs::storage::database::Database;
-use memory_rs::storage::memory_store::{Memory, MemoryStore};
+use agent_memory_rs::services::hybrid_retrieval::HybridRetrievalEngine;
+use agent_memory_rs::storage::database::Database;
+use agent_memory_rs::storage::memory_store::{Memory, MemoryStore};
 use std::fs;
 
 #[test]

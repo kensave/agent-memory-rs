@@ -1,8 +1,8 @@
-use memory_rs::models::dtos::Episode;
-use memory_rs::services::memory_manager::MemoryManager;
-use memory_rs::storage::database::Database;
-use memory_rs::traits::consolidation::ConsolidationEngine;
-use memory_rs::traits::memory_store::MemoryStore;
+use agent_agent_memory_rs::models::dtos::Episode;
+use agent_agent_memory_rs::services::memory_manager::MemoryManager;
+use agent_agent_memory_rs::storage::database::Database;
+use agent_agent_memory_rs::traits::consolidation::ConsolidationEngine;
+use agent_agent_memory_rs::traits::memory_store::MemoryStore;
 use serde_json::json;
 use std::fs;
 
@@ -73,7 +73,7 @@ async fn test_hierarchical_retrieval_integration() {
     let manager = MemoryManager::new(db);
 
     // Add semantic memory
-    let memory = memory_rs::storage::memory_store::Memory {
+    let memory = agent_memory_rs::storage::memory_store::Memory {
         id: None,
         workspace_id,
         agent_id: None,

@@ -1,7 +1,7 @@
-use memory_rs::models::dtos::Procedure;
-use memory_rs::services::procedural_store::ProceduralMemoryStore;
-use memory_rs::storage::database::Database;
-use memory_rs::traits::memory_store::MemoryStore;
+use agent_memory_rs::models::dtos::Procedure;
+use agent_memory_rs::services::procedural_store::ProceduralMemoryStore;
+use agent_memory_rs::storage::database::Database;
+use agent_memory_rs::traits::memory_store::MemoryStore;
 use serde_json::json;
 use std::fs;
 

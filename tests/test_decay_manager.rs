@@ -1,11 +1,11 @@
-use memory_rs::models::dtos::Episode;
-use memory_rs::services::decay_manager::DecayManager;
-use memory_rs::services::episodic_store::EpisodicMemoryStore;
-use memory_rs::services::procedural_store::ProceduralMemoryStore;
-use memory_rs::storage::database::Database;
-use memory_rs::storage::memory_store::{Memory, MemoryStore};
-use memory_rs::traits::decay::DecayManager as DecayManagerTrait;
-use memory_rs::traits::memory_store::MemoryStore as MemoryStoreTrait;
+use agent_memory_rs::models::dtos::Episode;
+use agent_memory_rs::services::decay_manager::DecayManager;
+use agent_memory_rs::services::episodic_store::EpisodicMemoryStore;
+use agent_memory_rs::services::procedural_store::ProceduralMemoryStore;
+use agent_memory_rs::storage::database::Database;
+use agent_memory_rs::storage::memory_store::{Memory, MemoryStore};
+use agent_memory_rs::traits::decay::DecayManager as DecayManagerTrait;
+use agent_memory_rs::traits::memory_store::MemoryStore as MemoryStoreTrait;
 use serde_json::json;
 use std::fs;
 

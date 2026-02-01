@@ -1,7 +1,7 @@
-use memory_rs::models::dtos::Episode;
-use memory_rs::services::memory_manager::MemoryManager;
-use memory_rs::storage::database::Database;
-use memory_rs::storage::memory_store::Memory;
+use agent_memory_rs::models::dtos::Episode;
+use agent_memory_rs::services::memory_manager::MemoryManager;
+use agent_memory_rs::storage::database::Database;
+use agent_memory_rs::storage::memory_store::Memory;
 use serde_json::json;
 use std::fs;
 

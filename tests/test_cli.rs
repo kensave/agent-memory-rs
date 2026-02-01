@@ -1,8 +1,8 @@
-use memory_rs::cli::memory_commands::MemoryCLI;
-use memory_rs::models::dtos::Episode;
-use memory_rs::services::memory_manager::MemoryManager;
-use memory_rs::storage::database::Database;
-use memory_rs::traits::memory_store::MemoryStore;
+use agent_memory_rs::cli::memory_commands::MemoryCLI;
+use agent_memory_rs::models::dtos::Episode;
+use agent_memory_rs::services::memory_manager::MemoryManager;
+use agent_memory_rs::storage::database::Database;
+use agent_memory_rs::traits::memory_store::MemoryStore;
 use serde_json::json;
 use std::fs;
 

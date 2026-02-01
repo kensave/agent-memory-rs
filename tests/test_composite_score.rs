@@ -1,4 +1,4 @@
-use memory_rs::services::composite_score::CompositeScoreCalculator;
+use agent_memory_rs::services::composite_score::CompositeScoreCalculator;
 
 #[test]
 fn test_calculate_recency() {

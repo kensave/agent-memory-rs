@@ -1,8 +1,8 @@
-use memory_rs::models::dtos::Episode;
-use memory_rs::services::episodic_store::EpisodicMemoryStore;
-use memory_rs::services::pattern_extractor::PatternExtractor;
-use memory_rs::storage::database::Database;
-use memory_rs::traits::memory_store::MemoryStore;
+use agent_memory_rs::models::dtos::Episode;
+use agent_memory_rs::services::episodic_store::EpisodicMemoryStore;
+use agent_memory_rs::services::pattern_extractor::PatternExtractor;
+use agent_memory_rs::storage::database::Database;
+use agent_memory_rs::traits::memory_store::MemoryStore;
 use serde_json::json;
 use std::fs;
 

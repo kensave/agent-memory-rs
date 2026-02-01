@@ -1,4 +1,4 @@
-use memory_rs::storage::Database;
+use agent_memory_rs::storage::Database;
 use std::fs;
 
 #[test]

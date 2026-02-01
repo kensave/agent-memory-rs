@@ -1,7 +1,7 @@
-use memory_rs::storage::Database;
-use memory_rs::services::EpisodicMemoryStore;
-use memory_rs::models::Episode;
-use memory_rs::traits::MemoryStore;
+use agent_memory_rs::storage::Database;
+use agent_memory_rs::services::EpisodicMemoryStore;
+use agent_memory_rs::models::Episode;
+use agent_memory_rs::traits::MemoryStore;
 use serde_json::json;
 
 #[tokio::test]
