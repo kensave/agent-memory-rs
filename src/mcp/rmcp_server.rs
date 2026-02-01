@@ -26,8 +26,8 @@ pub struct MemoryMcpServer {
 }
 
 impl MemoryMcpServer {
-    pub fn new(workspace_name: &str) -> Result<Self> {
-        let manager = WorkspaceManager::new(ModelType::MiniLM)?;
+    pub fn new(workspace_name: &str, model_type: ModelType) -> Result<Self> {
+        let manager = WorkspaceManager::new(model_type)?;
         let memory_system = manager.get_or_create_workspace(workspace_name)?;
         
         // Get the workspace ID

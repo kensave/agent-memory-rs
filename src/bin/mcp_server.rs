@@ -24,10 +24,22 @@ async fn main() -> Result<()> {
         })
         .unwrap_or_else(|| "default".to_string());
 
+    // Get model type from environment variable or default to BGE-Small
+    let model_type = std::env::var("MEMORY_MODEL")
+        .ok()
+        .and_then(|m| match m.to_lowercase().as_str() {
+            "minilm" => Some(agent_memory_rs::ModelType::MiniLM),
+            "nomic" => Some(agent_memory_rs::ModelType::Nomic),
+            "bge" | "bge-small" => Some(agent_memory_rs::ModelType::BgeSmall),
+            _ => None,
+        })
+        .unwrap_or(agent_memory_rs::ModelType::BgeSmall);
+
     tracing::info!("Using workspace: {}", workspace_name);
+    tracing::info!("Using model: {:?}", model_type);
 
     // Create server
-    let server = MemoryMcpServer::new(&workspace_name)?;
+    let server = MemoryMcpServer::new(&workspace_name, model_type)?;
     
     tracing::info!("Memory MCP Server ready");
     
