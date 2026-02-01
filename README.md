@@ -21,7 +21,7 @@ Agent Memory RS provides three types of memory for AI agents:
 ✅ **Intelligent Decay** - Composite scoring: `(recency×0.3) + (relevance×0.4) + (utility×0.3)`  
 ✅ **Hybrid Search** - BM25 keyword + vector semantic search with RRF fusion  
 ✅ **Hierarchical Retrieval** - Multi-level memory access (synopsis → semantic → episodic → archived)  
-✅ **MCP Server** - Model Context Protocol integration for Claude and other AI assistants  
+✅ **MCP Server** - Model Context Protocol integration for AI assistants  
 ✅ **CLI Tools** - 5 commands for memory operations  
 ✅ **Health Monitoring** - System metrics and health scoring  
 ✅ **Production Ready** - 44 integration tests, SOLID architecture, thread-safe  
@@ -45,7 +45,7 @@ The MCP server automatically consolidates memories on startup and every 20 messa
 ./target/release/agent-memory-mcp my-workspace
 ```
 
-**Configure your AI assistant** (e.g., Claude Desktop `~/.config/claude/config.json`):
+**Configure your AI assistant:**
 
 ```json
 {
@@ -131,6 +131,30 @@ manager.consolidate(1, "2026-01-31")?;
 - **[MCP Server Guide](docs/MCP_AUTO_CONSOLIDATION.md)** - How auto-consolidation works
 - **[Architecture](docs/architecture-redesign.md)** - System architecture and design decisions
 - **[Implementation Plan](docs/IMPLEMENTATION_PLAN.md)** - Development roadmap and completion status
+
+## 🎓 Agent Skill
+
+The repository includes a skill for AI agents using Kiro CLI:
+
+**Location:** [`skill/agent-memory/SKILL.md`](skill/agent-memory/SKILL.md)
+
+**Add to your agent configuration:**
+```json
+{
+  "resources": [
+    "skill:///path/to/agent-memory-rs/skill/agent-memory/SKILL.md"
+  ]
+}
+```
+
+**What the skill provides:**
+- When to use `@memory/learn` vs `@memory/search`
+- Best practices for memory management
+- Importance scoring and tagging strategies
+- Workflow patterns for common scenarios
+- Configuration options and troubleshooting
+
+The skill is loaded on-demand, providing guidance only when needed without consuming context at startup.
 
 ## 🏗️ Architecture
 
