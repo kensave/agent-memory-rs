@@ -78,6 +78,42 @@ The MCP server automatically consolidates memories on startup and every 20 messa
 - `@memory/learn` - Store new memories
 - `@memory/search` - Search across all memory types
 
+## Data Storage
+
+**Workspace Isolation:**
+Each workspace has its own isolated database. Memories are NOT shared between workspaces.
+
+**Database Location:**
+```
+~/.memory-rs/workspaces/
+├── prime-sde-workspace/
+│   └── memory.db          # All memories for this workspace
+├── my-project/
+│   └── memory.db          # Separate isolated memories
+└── default/
+    └── memory.db          # Default workspace
+```
+
+**Workspace Naming:**
+- Specified in MCP server args: `["workspace-name"]`
+- If no arg provided, uses current directory name
+- Falls back to "default" if directory name unavailable
+
+**Data Persistence:**
+- ✅ Survives Kiro restarts (stored in home directory)
+- ✅ Survives repo deletion (not stored in repo)
+- ❌ Deleting `~/.memory-rs/` loses all memories
+- ❌ No cross-workspace knowledge sharing (by design)
+
+**Model Cache:**
+Models are downloaded once and cached in the standard HuggingFace cache:
+```
+~/.cache/huggingface/hub/
+├── models--BAAI--bge-small-en-v1.5/
+├── models--nomic-ai--nomic-embed-text-v1/
+└── models--sentence-transformers--all-MiniLM-L6-v2/
+```
+
 ### CLI Usage
 
 ```bash
