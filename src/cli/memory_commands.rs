@@ -5,14 +5,58 @@ use anyhow::Result;
 
 pub struct MemoryCLI {
     manager: MemoryManager,
+    db: Database,
 }
 
 impl MemoryCLI {
     pub fn new(db_path: &str) -> Result<Self> {
         let db = Database::new(db_path)?;
-        Ok(Self {
-            manager: MemoryManager::new(db),
-        })
+        let manager = MemoryManager::new(db.clone());
+        Ok(Self { manager, db })
+    }
+
+    pub fn create_workspace(&self, name: &str, path: &str) -> Result<i64> {
+        println!("🏗️  Creating workspace '{}'...", name);
+        let workspace_id = self.db.execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES (?1, ?2)",
+                [name, path],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })?;
+        println!("✅ Workspace created with ID: {}", workspace_id);
+        Ok(workspace_id)
+    }
+
+    pub fn list_workspaces(&self) -> Result<()> {
+        println!("📋 Workspaces");
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        
+        let workspaces = self.db.execute(|conn| {
+            let mut stmt = conn.prepare("SELECT id, name, path, created_at FROM workspaces")?;
+            let rows = stmt.query_map([], |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                ))
+            })?;
+            let result: Vec<_> = rows.collect::<Result<Vec<_>, rusqlite::Error>>()?;
+            Ok(result)
+        })?;
+
+        if workspaces.is_empty() {
+            println!("No workspaces found.");
+        } else {
+            for (id, name, path, created_at) in workspaces {
+                println!("\n  ID: {}", id);
+                println!("  Name: {}", name);
+                println!("  Path: {}", path);
+                println!("  Created: {}", created_at);
+            }
+        }
+        Ok(())
     }
 
     pub async fn consolidate(&self, date: String) -> Result<()> {

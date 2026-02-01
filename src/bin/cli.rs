@@ -9,6 +9,8 @@ async fn main() -> Result<()> {
     if args.len() < 2 {
         println!("Usage: agent-memory-cli <command> [options]");
         println!("\nCommands:");
+        println!("  workspace create --name NAME --path PATH");
+        println!("  workspace list");
         println!("  store --workspace ID --type TYPE --context TEXT [--outcome TEXT] [--valence FLOAT]");
         println!("  consolidate --date YYYY-MM-DD");
         println!("  synopsis --workspace ID --date YYYY-MM-DD");
@@ -19,6 +21,26 @@ async fn main() -> Result<()> {
     }
     
     match args[1].as_str() {
+        "workspace" => {
+            let subcommand = args.get(2).expect("workspace subcommand required");
+            match subcommand.as_str() {
+                "create" => {
+                    let name = args.iter().position(|a| a == "--name")
+                        .and_then(|i| args.get(i + 1))
+                        .expect("--name required");
+                    let path = args.iter().position(|a| a == "--path")
+                        .and_then(|i| args.get(i + 1))
+                        .expect("--path required");
+                    cli.create_workspace(name, path)?;
+                }
+                "list" => {
+                    cli.list_workspaces()?;
+                }
+                _ => {
+                    println!("Unknown workspace subcommand: {}", subcommand);
+                }
+            }
+        }
         "store" => {
             let workspace_id = args.iter().position(|a| a == "--workspace")
                 .and_then(|i| args.get(i + 1))
