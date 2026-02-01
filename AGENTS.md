@@ -1,5 +1,20 @@
 # Agent Memory Architecture
 
+## Codebase Overview
+
+**Size:** Large (367 files, 6,455 LOC)  
+**Language:** Rust  
+**Components:** 228 functions, 45 structs/classes  
+**Tests:** 44 integration tests
+
+### Key Modules
+
+- **Services** (11 files, ~1,600 LOC) - Core memory operations
+- **Storage** (3 files, ~800 LOC) - Database and persistence
+- **MCP** (3 files, ~1,000 LOC) - Model Context Protocol server
+- **Traits** (6 files, ~110 LOC) - SOLID interfaces
+- **CLI** (2 files, ~125 LOC) - Command-line tools
+
 ## Overview
 
 Memory-RS provides a comprehensive memory management system for AI agents with three memory types: episodic (raw events), semantic (distilled knowledge), and procedural (learned workflows). Memories are workspace-scoped with automatic consolidation and intelligent decay.
