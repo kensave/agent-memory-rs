@@ -8,7 +8,7 @@ fn test_bge_small_semantic_search() {
     let _ = fs::remove_file(db_path);
 
     println!("Loading BGE-Small model...");
-    let system = MemorySystem::new_with_model(db_path, ModelType::BgeSmall).unwrap();
+    let system = MemorySystem::new(db_path, ModelType::BgeSmall).unwrap();
 
     // Create workspace
     system.database().execute(|conn| {

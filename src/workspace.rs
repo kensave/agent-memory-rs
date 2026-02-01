@@ -30,7 +30,7 @@ impl WorkspaceManager {
         
         fs::create_dir_all(&workspace_path)?;
         
-        let system = MemorySystem::new(&db_path, self.model_type)?;
+        let system = MemorySystem::new_lazy(&db_path, self.model_type)?;
         
         // Ensure workspace entry exists
         let workspace_id: Option<i64> = system.database().execute(|conn| {

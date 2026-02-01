@@ -7,7 +7,7 @@ fn test_semantic_search_with_different_words() {
     let db_path = "/tmp/test_semantic_search.db";
     let _ = fs::remove_file(db_path);
 
-    let system = MemorySystem::new_with_model(db_path, ModelType::MiniLM).unwrap();
+    let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
 
     // Create workspace
     system.database().execute(|conn| {

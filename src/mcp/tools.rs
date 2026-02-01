@@ -236,7 +236,7 @@ mod tests {
         let db_path = "/tmp/test_learn_tool.db";
         let _ = fs::remove_file(db_path);
 
-        let system = MemorySystem::new_with_model(db_path, ModelType::MiniLM).unwrap();
+        let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
         
         // Create workspace
         let workspace_id = system.database().execute(|conn| {
@@ -266,7 +266,7 @@ mod tests {
         let db_path = "/tmp/test_search_tool.db";
         let _ = fs::remove_file(db_path);
 
-        let system = MemorySystem::new_with_model(db_path, ModelType::MiniLM).unwrap();
+        let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
         
         let workspace_id = system.database().execute(|conn| {
             conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
@@ -305,7 +305,7 @@ mod tests {
         let db_path = "/tmp/test_learn_validation.db";
         let _ = fs::remove_file(db_path);
 
-        let system = MemorySystem::new_with_model(db_path, ModelType::MiniLM).unwrap();
+        let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
         let tools = MemoryTools::new(system);
 
         // Empty text should fail
@@ -326,7 +326,7 @@ mod tests {
         let db_path = "/tmp/test_search_validation.db";
         let _ = fs::remove_file(db_path);
 
-        let system = MemorySystem::new_with_model(db_path, ModelType::MiniLM).unwrap();
+        let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
         let tools = MemoryTools::new(system);
 
         // Empty query should fail
@@ -347,7 +347,7 @@ mod tests {
         let db_path = "/tmp/test_tools_list.db";
         let _ = fs::remove_file(db_path);
 
-        let system = MemorySystem::new_with_model(db_path, ModelType::MiniLM).unwrap();
+        let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
         let tools = MemoryTools::new(system);
 
         let result = tools.handle_request("tools/list", None).unwrap();
@@ -365,7 +365,7 @@ mod tests {
         let db_path = "/tmp/test_tools_call.db";
         let _ = fs::remove_file(db_path);
 
-        let system = MemorySystem::new_with_model(db_path, ModelType::MiniLM).unwrap();
+        let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
         
         let workspace_id = system.database().execute(|conn| {
             conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
