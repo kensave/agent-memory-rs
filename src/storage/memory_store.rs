@@ -3,23 +3,38 @@ use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use super::Database;
 
+fn is_zero(n: &i64) -> bool { *n == 0 }
+fn is_empty_vec(v: &Vec<i64>) -> bool { v.is_empty() }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Memory {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<i64>,
     pub workspace_id: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_id: Option<i64>,
     pub text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<String>,
     pub importance_score: f64,
+    #[serde(skip_serializing_if = "is_zero")]
     pub access_count: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_accessed: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub conversation_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parent_memory_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_feedback: Option<String>,
+    #[serde(skip_serializing_if = "is_empty_vec")]
     pub source_episodes: Vec<i64>,
     pub confidence: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_validated: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
 }
 

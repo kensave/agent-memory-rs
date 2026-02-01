@@ -351,35 +351,9 @@ impl ServerHandler for MemoryMcpServer {
                 // Check if consolidation needed
                 self.check_consolidation().await;
 
-                // Clean up results - remove null/empty fields
-                let cleaned_results: Vec<serde_json::Value> = results.iter().map(|r| {
-                    let mut memory = serde_json::to_value(&r.memory).unwrap();
-                    if let Some(obj) = memory.as_object_mut() {
-                        obj.retain(|_, v| !v.is_null());
-                        // Remove empty arrays
-                        obj.retain(|k, v| {
-                            if k == "source_episodes" && v.as_array().map_or(false, |a| a.is_empty()) {
-                                false
-                            } else {
-                                true
-                            }
-                        });
-                    }
-                    
-                    json!({
-                        "text": r.memory.text,
-                        "similarity_score": r.similarity_score,
-                        "combined_score": r.combined_score,
-                        "importance_score": r.memory.importance_score,
-                        "tags": r.memory.tags,
-                        "created_at": r.memory.created_at,
-                        "memory_id": r.memory.id,
-                    })
-                }).collect();
-
                 Ok(CallToolResult::success(vec![Content::text(json!({
-                    "results": cleaned_results,
-                    "count": cleaned_results.len()
+                    "results": results,
+                    "count": results.len()
                 }).to_string())]))
             }
             _ => Err(ErrorData::new(
