@@ -1,6 +1,23 @@
 # Memory-RS API Documentation
 
-Complete API reference for Memory-RS library and MCP server.
+> **Note**: This document is outdated. Please refer to the comprehensive documentation in:
+> - **[docs/README.md](docs/README.md)** - Complete API reference with new memory system
+> - **[docs/MCP_AUTO_CONSOLIDATION.md](docs/MCP_AUTO_CONSOLIDATION.md)** - MCP server usage
+> - **[docs/interface-design.md](docs/interface-design.md)** - SOLID architecture and traits
+
+## Quick Links
+
+### New Memory System (v2)
+- **MemoryManager**: Unified facade for all memory operations
+- **EpisodicMemoryStore**: Raw event storage
+- **SemanticMemoryStore**: Knowledge with confidence tracking
+- **ProceduralMemoryStore**: Workflow tracking
+- **HybridRetrievalEngine**: BM25 + Vector search
+- **ConsolidationEngine**: Pattern extraction and synopsis generation
+
+### Legacy API (v1)
+
+The following API is maintained for backward compatibility but deprecated in favor of the new memory system.
 
 ## Table of Contents
 

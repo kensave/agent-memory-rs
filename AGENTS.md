@@ -2,28 +2,51 @@
 
 ## Overview
 
-Memory-RS provides workspace-scoped persistent memory for AI agents with optional global memory access. By default, memories are isolated per workspace to maintain context separation.
+Memory-RS provides a comprehensive memory management system for AI agents with three memory types: episodic (raw events), semantic (distilled knowledge), and procedural (learned workflows). Memories are workspace-scoped with automatic consolidation and intelligent decay.
+
+## Memory Types
+
+### 1. Episodic Memory
+Raw interaction events with full context:
+- Event type, timestamp, conversation ID
+- Outcome and valence (emotional value)
+- Full context as JSON
+- Archival support (active → archived)
+
+### 2. Semantic Memory
+Distilled knowledge with confidence tracking:
+- Source episode tracking
+- Confidence scores (updated with reinforcement)
+- Access count and validation timestamps
+- Tags and importance scores
+
+### 3. Procedural Memory
+Learned workflows and patterns:
+- Trigger conditions
+- Action sequences
+- Success rate tracking
+- Usage count and last used timestamp
 
 ## End-to-End Flow
 
 ### 1. Workspace Initialization
 
 ```
-Agent starts → MCP Server detects workspace → Creates/loads workspace DB
+Agent starts → MCP Server initializes → Consolidates yesterday's memories → Ready
 ```
 
 **Storage Location:**
 ```
 ~/.memory-rs/workspaces/
-  ├── project-a/memory.db    # Workspace-scoped
-  ├── project-b/memory.db    # Workspace-scoped
-  └── global/memory.db       # Global memories (optional)
+  ├── project-a.db           # Workspace database
+  ├── project-b.db           # Workspace database
+  └── default.db             # Default workspace
 ```
 
-### 2. Learning Flow
+### 2. Learning Flow (Episodic Storage)
 
 ```
-Agent learns → Text embedded → Vector stored → Workspace-scoped by default
+Agent learns → Episode created → Stored in episodic memory → Message counter increments
 ```
 
 **Example:**
@@ -41,15 +64,23 @@ Agent learns → Text embedded → Vector stored → Workspace-scoped by default
 }
 ```
 
-**What happens:**
-1. Text → MiniLM embedder → 384d vector
-2. Store in current workspace DB
-3. Return memory_id
-
-### 3. Search Flow
+### 3. Consolidation Flow (Automatic)
 
 ```
-Agent searches → Query embedded → Vector similarity + filters → Ranked results
+Every 20 messages → Consolidate triggered → Extract patterns → Update semantic/procedural → Generate synopsis
+```
+
+**What happens:**
+1. PatternExtractor analyzes episodes
+2. Recurring patterns → Semantic memory (confidence > 0.6)
+3. Successful workflows → Procedural memory (frequency >= 2)
+4. DailySynopsisGenerator creates summary
+5. Episodes marked for archival
+
+### 4. Retrieval Flow (Hierarchical)
+
+```
+Agent queries → Hybrid search (BM25 + Vector) → Hierarchical retrieval → Ranked results
 ```
 
 **Example:**
@@ -60,21 +91,58 @@ Agent searches → Query embedded → Vector similarity + filters → Ranked res
     "name": "search",
     "arguments": {
       "query": "coding preferences",
-      "limit": 5
+      "limit": 10
     }
   }
 }
 ```
 
 **What happens:**
-1. Query → MiniLM embedder → 384d vector
-2. Search current workspace by default
-3. Rank: 70% similarity + 30% importance
+1. Query → BM25 keyword search + Vector similarity
+2. Hierarchical retrieval:
+   - Semantic memory (50% of results)
+   - Recent episodes (25% of results)
+   - Procedures (25% of results)
+3. RRF fusion and composite scoring
 4. Return top N results
+
+### 5. Decay Flow (Weekly)
+
+```
+Every 7 days → Calculate composite scores → Archive low-scoring → Prune redundant
+```
+
+**Composite Score Formula:**
+```
+score = (recency × 0.3) + (relevance × 0.4) + (utility × 0.3)
+
+recency = exp(-0.1 × days_since_access)
+relevance = cosine_similarity(embedding, query)
+utility = (access_count × 0.4) + (success_rate × 0.4) + (feedback × 0.2)
+```
+
+## Memory Lifecycle
+
+### Week 1: Accumulation
+- Episodes stored as events occur
+- Message counter tracks activity
+- Auto-consolidation every 20 messages
+
+### Week 2-4: Consolidation
+- Patterns extracted nightly
+- Semantic memory grows
+- Procedures refined with success rates
+- Daily synopses accumulate
+
+### Month 2+: Optimization
+- Low-scoring episodes archived
+- High-confidence knowledge retained
+- Proven workflows (80%+ success) prioritized
+- Context stays relevant
 
 ## Memory Scoping
 
-### Default: Workspace-Scoped
+### Workspace-Scoped (Default)
 
 Memories are isolated per workspace by default:
 

@@ -1,6 +1,36 @@
 # Memory-RS Usage Guide
 
-Complete guide to using the Memory-RS persistent memory system.
+> **Note**: This document is outdated. Please refer to:
+> - **[README.md](README.md)** - Quick start and overview
+> - **[docs/README.md](docs/README.md)** - Complete usage guide with new features
+> - **[docs/MCP_AUTO_CONSOLIDATION.md](docs/MCP_AUTO_CONSOLIDATION.md)** - MCP server with auto-consolidation
+
+## New Features (v2)
+
+### Memory Types
+- **Episodic**: Raw events with context and valence
+- **Semantic**: Distilled knowledge with confidence
+- **Procedural**: Learned workflows with success rates
+
+### Auto-Consolidation
+- Consolidates on MCP server startup
+- Auto-consolidates every 20 messages
+- Non-blocking background execution
+
+### CLI Commands
+```bash
+memory-cli synopsis --date 2026-01-31
+memory-cli query "rust programming"
+memory-cli stats --workspace 1
+memory-cli consolidate --date 2026-01-31
+memory-cli prune --workspace 1
+```
+
+---
+
+## Legacy Usage Guide
+
+The following guide covers the v1 API (maintained for backward compatibility).
 
 ## Table of Contents
 
