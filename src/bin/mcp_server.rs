@@ -26,8 +26,14 @@ async fn main() -> Result<()> {
 
     tracing::info!("Using workspace: {}", workspace_name);
 
-    // Create and serve the server via stdio
-    let service = MemoryMcpServer::new(&workspace_name)?
+    // Create server
+    let server = MemoryMcpServer::new(&workspace_name)?;
+    
+    // Initialize (consolidates yesterday's memories)
+    server.initialize().await?;
+    
+    // Serve via stdio
+    let service = server
         .serve(stdio())
         .await
         .inspect_err(|e| {

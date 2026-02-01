@@ -20,7 +20,7 @@ impl MemorySystem {
     }
 
     pub fn learn(&self, memory: &Memory) -> Result<i64> {
-        let store = MemoryStore::new(self.db.connection());
+        let store = MemoryStore::new(self.db.clone());
         
         // Generate embedding
         let embedding = self.embedder.embed(&memory.text)?;
@@ -33,7 +33,7 @@ impl MemorySystem {
     }
 
     pub fn learn_batch(&self, memories: &[Memory]) -> Result<Vec<i64>> {
-        let store = MemoryStore::new(self.db.connection());
+        let store = MemoryStore::new(self.db.clone());
         let mut memory_ids = Vec::new();
         
         // Collect texts for batch embedding
@@ -51,7 +51,7 @@ impl MemorySystem {
     }
 
     pub fn search(&self, query: &str, filters: &SearchFilters, limit: usize) -> Result<Vec<SearchResult>> {
-        let store = MemoryStore::new(self.db.connection());
+        let store = MemoryStore::new(self.db.clone());
         
         // Generate query embedding
         let query_embedding = self.embedder.embed(query)?;
@@ -63,17 +63,17 @@ impl MemorySystem {
     }
 
     pub fn get_memory(&self, memory_id: i64) -> Result<Option<Memory>> {
-        let store = MemoryStore::new(self.db.connection());
+        let store = MemoryStore::new(self.db.clone());
         store.get_memory(memory_id)
     }
 
     pub fn update_memory(&self, memory_id: i64, memory: &Memory) -> Result<()> {
-        let store = MemoryStore::new(self.db.connection());
+        let store = MemoryStore::new(self.db.clone());
         store.update_memory(memory_id, memory)
     }
 
     pub fn delete_memory(&self, memory_id: i64) -> Result<()> {
-        let store = MemoryStore::new(self.db.connection());
+        let store = MemoryStore::new(self.db.clone());
         store.delete_memory(memory_id)
     }
 }
@@ -91,11 +91,14 @@ mod tests {
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
 
         // Create workspace
-        system.db.connection().execute(
-            "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
-            [],
-        ).unwrap();
-        let workspace_id = system.db.connection().last_insert_rowid();
+        system.db.execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                [],
+            )?;
+            Ok(conn.last_insert_rowid())
+        }).unwrap();
+        let workspace_id = system.db.execute(|conn| Ok(conn.last_insert_rowid())).unwrap();
 
         // Learn some facts
         let facts = vec![
@@ -117,7 +120,10 @@ mod tests {
                 conversation_id: None,
                 parent_memory_id: None,
                 user_feedback: None,
-                created_at: None,
+            source_episodes: vec![],
+            confidence: 0.5,
+            last_validated: None,
+            created_at: None,
                 updated_at: None,
             };
             system.learn(&memory).unwrap();
@@ -143,11 +149,13 @@ mod tests {
 
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
 
-        system.db.connection().execute(
-            "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
-            [],
-        ).unwrap();
-        let workspace_id = system.db.connection().last_insert_rowid();
+        let workspace_id = system.db.execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                [],
+            )?;
+            Ok(conn.last_insert_rowid())
+        }).unwrap();
 
         let memories: Vec<Memory> = (0..5).map(|i| Memory {
             id: None,
@@ -161,6 +169,9 @@ mod tests {
             conversation_id: None,
             parent_memory_id: None,
             user_feedback: None,
+            source_episodes: vec![],
+            confidence: 0.5,
+            last_validated: None,
             created_at: None,
             updated_at: None,
         }).collect();
@@ -184,11 +195,13 @@ mod tests {
 
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
 
-        system.db.connection().execute(
-            "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
-            [],
-        ).unwrap();
-        let workspace_id = system.db.connection().last_insert_rowid();
+        let workspace_id = system.db.execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                [],
+            )?;
+            Ok(conn.last_insert_rowid())
+        }).unwrap();
 
         // Learn memories with different importance scores
         for i in 0..5 {
@@ -204,7 +217,10 @@ mod tests {
                 conversation_id: None,
                 parent_memory_id: None,
                 user_feedback: None,
-                created_at: None,
+            source_episodes: vec![],
+            confidence: 0.5,
+            last_validated: None,
+            created_at: None,
                 updated_at: None,
             };
             system.learn(&memory).unwrap();
@@ -233,11 +249,13 @@ mod tests {
 
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
 
-        system.db.connection().execute(
-            "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
-            [],
-        ).unwrap();
-        let workspace_id = system.db.connection().last_insert_rowid();
+        let workspace_id = system.db.execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                [],
+            )?;
+            Ok(conn.last_insert_rowid())
+        }).unwrap();
 
         // Empty text should still work (mock embedder handles it)
         let memory = Memory {
@@ -252,6 +270,9 @@ mod tests {
             conversation_id: None,
             parent_memory_id: None,
             user_feedback: None,
+            source_episodes: vec![],
+            confidence: 0.5,
+            last_validated: None,
             created_at: None,
             updated_at: None,
         };

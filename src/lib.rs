@@ -5,6 +5,9 @@ pub mod storage;
 pub mod memory_system;
 pub mod mcp;
 pub mod workspace;
+pub mod traits;
+pub mod services;
+pub mod cli;
 
 pub use embedder::FastEmbedder;
 pub use models::{ModelType, QuantizationType};
@@ -13,3 +16,4 @@ pub use storage::{Database, MemoryStore};
 pub use memory_system::MemorySystem;
 pub use mcp::{McpServer, JsonRpcRequest, JsonRpcResponse};
 pub use workspace::WorkspaceManager;
+pub use cli::memory_commands::MemoryCLI;

@@ -1,0 +1,347 @@
+# Memory-RS: Agent Memory Management System
+
+## Overview
+
+A comprehensive memory management system for AI agents with episodic, semantic, and procedural memory types, intelligent consolidation, and decay mechanisms.
+
+## Architecture
+
+### Core Components
+
+```
+MemoryManager (Facade)
+    ├── EpisodicMemoryStore    - Raw interaction events
+    ├── SemanticMemoryStore    - Distilled knowledge
+    ├── ProceduralMemoryStore  - Learned workflows
+    ├── HybridRetrievalEngine  - BM25 + Vector search
+    ├── ConsolidationEngine    - Pattern extraction & synopsis
+    └── DecayManager           - Intelligent archival
+```
+
+### Memory Types
+
+1. **Episodic Memory**: Stores specific events with full context
+   - Event type, timestamp, conversation ID
+   - Outcome, valence (emotional value)
+   - Archival support
+
+2. **Semantic Memory**: Distilled facts and patterns
+   - Source episode tracking
+   - Confidence scores
+   - Access count and validation
+
+3. **Procedural Memory**: Learned workflows
+   - Trigger conditions
+   - Action sequences
+   - Success rate tracking
+
+## Quick Start
+
+### Basic Usage
+
+```rust
+use memory_rs::{Database, MemoryManager};
+use memory_rs::models::dtos::Episode;
+
+// Initialize
+let db = Database::new("memory.db")?;
+let manager = MemoryManager::new(db);
+
+// Store episode
+let episode = Episode {
+    workspace_id: 1,
+    event_type: "task".to_string(),
+    timestamp: "2026-01-31 10:00:00".to_string(),
+    outcome: Some("success".to_string()),
+    valence: Some(0.8),
+    // ... other fields
+};
+manager.store_episode(episode).await?;
+
+// Retrieve memories
+let results = manager.retrieve("task", workspace_id, 10)?;
+
+// Consolidate daily
+let synopsis = manager.consolidate("2026-01-31".to_string()).await?;
+```
+
+### CLI Commands
+
+```bash
+# Start MCP server
+cargo run --bin memory-rs-mcp my-workspace
+
+# View statistics
+memory-cli stats --workspace 1
+
+# Query memories
+memory-cli query "rust programming" --limit 10
+
+# View daily synopsis
+memory-cli synopsis --date 2026-01-31
+
+# Consolidate memories
+memory-cli consolidate --date 2026-01-31
+
+# Prune old memories
+memory-cli prune --dry-run
+```
+
+## Key Features
+
+### 1. Hierarchical Retrieval
+
+Retrieves memories in priority order:
+- Semantic memory (50% of results)
+- Recent episodes (25%)
+- Procedures (25%)
+
+```rust
+let results = manager.retrieve_hierarchical(query, workspace_id, 10)?;
+```
+
+### 2. Daily Consolidation
+
+Automatically extracts patterns and generates synopsis:
+
+```rust
+let synopsis = manager.consolidate(date).await?;
+// Returns: summary, key insights, new knowledge, new procedures
+```
+
+### 3. Intelligent Decay
+
+Composite scoring formula:
+```
+score = (recency × 0.3) + (relevance × 0.4) + (utility × 0.3)
+```
+
+Archives low-scoring memories automatically.
+
+### 4. Hybrid Search
+
+Combines BM25 keyword search with vector similarity:
+- RRF (Reciprocal Rank Fusion) for result merging
+- Type-specific search strategies
+- Configurable result limits
+
+## Database Schema
+
+### Core Tables
+
+- `workspaces` - Project isolation
+- `agents` - Multi-agent support
+- `memories` - Semantic knowledge
+- `episodes` - Episodic events
+- `procedures` - Learned workflows
+- `daily_synopsis` - Consolidated summaries
+
+### Vector Tables
+
+- `vec0` - Memory embeddings (384 dims)
+- `vec_episodes` - Episode embeddings
+- `vec_procedures` - Procedure embeddings
+- `vec_synopsis` - Synopsis embeddings
+
+## API Reference
+
+### MemoryManager
+
+**Storage**:
+- `store_episode(episode)` → `i64`
+- `store_procedure(procedure)` → `i64`
+- `store_knowledge(memory)` → `i64`
+
+**Retrieval**:
+- `retrieve(query, workspace_id, limit)` → `Vec<HybridSearchResult>`
+- `retrieve_hierarchical(query, workspace_id, max)` → `Vec<HybridSearchResult>`
+- `get_synopsis(workspace_id, date)` → `Option<Synopsis>`
+
+**Management**:
+- `consolidate(date)` → `Synopsis`
+- `prune(workspace_id, dry_run)` → `(usize, usize, usize)`
+- `get_memory_stats(workspace_id)` → `MemoryStats`
+
+### ContextInjectionService
+
+Prepares memory context for LLM consumption:
+
+```rust
+let service = ContextInjectionService::new(manager);
+let context = service.prepare_context(query, workspace_id, token_budget)?;
+```
+
+Budget allocation:
+- Synopsis: 25%
+- Semantic: 40%
+- Episodic: 25%
+- Procedural: 10%
+
+### HealthMonitor
+
+Tracks memory system health:
+
+```rust
+let monitor = HealthMonitor::new(manager);
+let metrics = monitor.calculate_metrics(workspace_id)?;
+let health = monitor.check_health(workspace_id)?;
+```
+
+Metrics:
+- Total memories
+- Active ratio
+- Average confidence
+- Recent activity
+- Health score (0-1)
+
+## Configuration
+
+### Decay Thresholds
+
+```rust
+// Archive episodes with recency < 0.3
+manager.prune(workspace_id, false).await?;
+
+// Custom thresholds
+decay_manager.archive_episodes(workspace_id, 0.2, false).await?;
+decay_manager.prune_low_confidence(workspace_id, 0.4, false).await?;
+decay_manager.remove_inactive_procedures(workspace_id, 90, false).await?;
+```
+
+### Composite Score Weights
+
+```rust
+let calculator = CompositeScoreCalculator::with_weights(0.3, 0.4, 0.3);
+```
+
+## Performance
+
+### Benchmarks
+
+- Episode storage: ~5ms
+- Hybrid search: ~20ms (1000 memories)
+- Consolidation: ~2s (100 episodes)
+- Synopsis generation: ~500ms
+
+### Optimization Tips
+
+1. **Batch Operations**: Use batch methods for bulk inserts
+2. **Index Usage**: Ensure indexes on timestamp, workspace_id
+3. **Archival**: Run consolidation nightly to keep active set small
+4. **Token Budget**: Adjust context budget based on LLM limits
+
+## Testing
+
+### Run All Tests
+
+```bash
+cargo test --quiet
+```
+
+### Integration Tests
+
+- `test_episodic_store` - Episode CRUD
+- `test_procedural_store` - Procedure operations
+- `test_semantic_extensions` - Knowledge tracking
+- `test_consolidation_engine` - Full pipeline
+- `test_lifecycle` - End-to-end workflow
+
+Total: 44 integration tests
+
+## SOLID Principles
+
+### Single Responsibility
+Each service has one clear purpose:
+- `EpisodicMemoryStore` - Episode storage only
+- `PatternExtractor` - Pattern analysis only
+- `DecayManager` - Cleanup only
+
+### Open/Closed
+Extend via traits without modifying existing code:
+```rust
+impl MemoryStore for CustomStore { ... }
+```
+
+### Liskov Substitution
+All stores implement `MemoryStore` trait interchangeably.
+
+### Interface Segregation
+Clients depend only on methods they use:
+- `MemoryStore` - CRUD operations
+- `ConsolidationEngine` - Consolidation only
+- `DecayManager` - Decay only
+
+### Dependency Inversion
+High-level modules depend on abstractions (traits), not concrete implementations.
+
+## Migration from Existing System
+
+### Before (Old System)
+
+```rust
+let system = MemorySystem::new(db_path)?;
+system.learn(text, workspace_id, tags)?;
+let results = system.search(query, workspace_id, limit)?;
+```
+
+### After (New System)
+
+```rust
+let manager = MemoryManager::new(db);
+
+// Store as semantic memory
+manager.store_knowledge(&memory)?;
+
+// Or store as episode
+manager.store_episode(episode).await?;
+
+// Retrieve with hybrid search
+let results = manager.retrieve(query, workspace_id, limit)?;
+```
+
+### Backward Compatibility
+
+The old `memories` table is now semantic memory. Existing data works without migration.
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue**: Old tests failing after schema changes
+**Solution**: Update tests to use new Memory struct fields (source_episodes, confidence, last_validated)
+
+**Issue**: Consolidation taking too long
+**Solution**: Reduce episode count via more aggressive archival thresholds
+
+**Issue**: Low health score
+**Solution**: Run consolidation to extract patterns and increase confidence scores
+
+## Contributing
+
+### Code Style
+
+- Use minimal, focused implementations
+- Follow SOLID principles
+- Add tests for new features
+- Document public APIs
+
+### Testing
+
+```bash
+# Run specific test
+cargo test --test test_name
+
+# Run with output
+cargo test -- --nocapture
+
+# Check compilation
+cargo check
+```
+
+## License
+
+MIT
+
+## Authors
+
+Built with SOLID principles and minimal code philosophy.

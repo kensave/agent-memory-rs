@@ -1,5 +1,4 @@
 use anyhow::Result;
-use hf_hub::api::sync::Api;
 use hf_hub::{Repo, RepoType};
 use std::path::PathBuf;
 use tokio::fs;

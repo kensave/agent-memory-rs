@@ -163,6 +163,9 @@ impl MemoryTools {
             conversation_id: request.conversation_id,
             parent_memory_id: None,
             user_feedback: None,
+            source_episodes: vec![],
+            confidence: 0.5,
+            last_validated: None,
             created_at: None,
             updated_at: None,
         };
@@ -236,11 +239,10 @@ mod tests {
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
         
         // Create workspace
-        system.database().connection().execute(
-            "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
-            [],
-        ).unwrap();
-        let workspace_id = system.database().connection().last_insert_rowid();
+        let workspace_id = system.database().execute(|conn| {
+            conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
+            Ok(conn.last_insert_rowid())
+        }).unwrap();
 
         let tools = MemoryTools::new(system);
 
@@ -266,11 +268,10 @@ mod tests {
 
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
         
-        system.database().connection().execute(
-            "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
-            [],
-        ).unwrap();
-        let workspace_id = system.database().connection().last_insert_rowid();
+        let workspace_id = system.database().execute(|conn| {
+            conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
+            Ok(conn.last_insert_rowid())
+        }).unwrap();
 
         let tools = MemoryTools::new(system);
 
@@ -366,11 +367,10 @@ mod tests {
 
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
         
-        system.database().connection().execute(
-            "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
-            [],
-        ).unwrap();
-        let workspace_id = system.database().connection().last_insert_rowid();
+        let workspace_id = system.database().execute(|conn| {
+            conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
+            Ok(conn.last_insert_rowid())
+        }).unwrap();
 
         let tools = MemoryTools::new(system);
 
