@@ -1,5 +1,6 @@
 use crate::services::memory_manager::MemoryManager;
 use crate::storage::database::Database;
+use crate::models::dtos::Episode;
 use anyhow::Result;
 
 pub struct MemoryCLI {
@@ -94,6 +95,29 @@ impl MemoryCLI {
                 println!("   {}", result.content);
             }
         }
+        Ok(())
+    }
+
+    pub async fn store_episode(&self, workspace_id: i64, event_type: &str, context: &str, outcome: Option<&str>, valence: Option<f64>) -> Result<()> {
+        println!("💾 Storing episode...");
+        
+        let episode = Episode {
+            id: None,
+            workspace_id,
+            agent_id: None,
+            timestamp: chrono::Local::now().to_rfc3339(),
+            conversation_id: None,
+            event_type: event_type.to_string(),
+            context: serde_json::json!({ "text": context }),
+            outcome: outcome.map(|s| s.to_string()),
+            valence,
+            archived: false,
+            created_at: None,
+        };
+        
+        let episode_id = self.manager.store_episode(episode).await?;
+        
+        println!("✅ Episode stored with ID: {}", episode_id);
         Ok(())
     }
 }

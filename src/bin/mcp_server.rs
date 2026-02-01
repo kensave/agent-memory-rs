@@ -29,8 +29,7 @@ async fn main() -> Result<()> {
     // Create server
     let server = MemoryMcpServer::new(&workspace_name)?;
     
-    // Initialize (consolidates yesterday's memories)
-    server.initialize().await?;
+    tracing::info!("Memory MCP Server ready");
     
     // Serve via stdio
     let service = server

@@ -9,6 +9,7 @@ async fn main() -> Result<()> {
     if args.len() < 2 {
         println!("Usage: agent-memory-cli <command> [options]");
         println!("\nCommands:");
+        println!("  store --workspace ID --type TYPE --context TEXT [--outcome TEXT] [--valence FLOAT]");
         println!("  consolidate --date YYYY-MM-DD");
         println!("  synopsis --workspace ID --date YYYY-MM-DD");
         println!("  stats --workspace ID");
@@ -18,6 +19,25 @@ async fn main() -> Result<()> {
     }
     
     match args[1].as_str() {
+        "store" => {
+            let workspace_id = args.iter().position(|a| a == "--workspace")
+                .and_then(|i| args.get(i + 1))
+                .and_then(|s| s.parse().ok())
+                .expect("--workspace required");
+            let event_type = args.iter().position(|a| a == "--type")
+                .and_then(|i| args.get(i + 1))
+                .expect("--type required");
+            let context = args.iter().position(|a| a == "--context")
+                .and_then(|i| args.get(i + 1))
+                .expect("--context required");
+            let outcome = args.iter().position(|a| a == "--outcome")
+                .and_then(|i| args.get(i + 1))
+                .map(|s| s.as_str());
+            let valence = args.iter().position(|a| a == "--valence")
+                .and_then(|i| args.get(i + 1))
+                .and_then(|s| s.parse().ok());
+            cli.store_episode(workspace_id, event_type, context, outcome, valence).await?;
+        }
         "consolidate" => {
             let date = args.iter().position(|a| a == "--date")
                 .and_then(|i| args.get(i + 1))
