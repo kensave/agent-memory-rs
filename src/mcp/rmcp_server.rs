@@ -22,6 +22,7 @@ pub struct MemoryMcpServer {
     workspace_id: i64,
     message_count: Arc<Mutex<usize>>,
     consolidation_threshold: usize,
+    initialized: Arc<Mutex<bool>>,
 }
 
 impl MemoryMcpServer {
@@ -49,6 +50,7 @@ impl MemoryMcpServer {
             workspace_id,
             message_count: Arc::new(Mutex::new(0)),
             consolidation_threshold: 20, // Default: every 20 messages
+            initialized: Arc::new(Mutex::new(false)),
         })
     }
     
@@ -80,19 +82,44 @@ impl MemoryMcpServer {
     
     /// Check if consolidation needed after message
     async fn check_consolidation(&self) {
+        // Run initialization on first call
+        let mut init = self.initialized.lock().await;
+        if !*init {
+            *init = true;
+            drop(init); // Release lock before spawning
+            
+            tracing::info!("Running initial consolidation for yesterday");
+            let yesterday = (chrono::Local::now() - chrono::Duration::days(1))
+                .format("%Y-%m-%d").to_string();
+            
+            let manager = Arc::clone(&self.memory_manager);
+            tokio::spawn(async move {
+                match manager.consolidate(yesterday).await {
+                    Ok(synopsis) => {
+                        tracing::info!("Initial consolidation complete: {} insights", 
+                                     synopsis.key_insights.len());
+                    }
+                    Err(e) => {
+                        tracing::warn!("Initial consolidation failed (non-fatal): {}", e);
+                    }
+                }
+            });
+        }
+        
+        // Check message count for periodic consolidation
         let mut count = self.message_count.lock().await;
         *count += 1;
         
         if *count >= self.consolidation_threshold {
-            println!("📊 {} messages processed, triggering consolidation", *count);
+            tracing::info!("{} messages processed, triggering consolidation", *count);
             
             let today = chrono::Local::now().format("%Y-%m-%d").to_string();
             let manager = Arc::clone(&self.memory_manager);
             
             tokio::spawn(async move {
                 match manager.consolidate(today).await {
-                    Ok(_) => println!("✅ Auto-consolidation complete"),
-                    Err(e) => eprintln!("❌ Auto-consolidation failed: {}", e),
+                    Ok(_) => tracing::info!("Auto-consolidation complete"),
+                    Err(e) => tracing::error!("Auto-consolidation failed: {}", e),
                 }
             });
             
