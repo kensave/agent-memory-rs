@@ -1,4 +1,4 @@
-use memory_rs::{WorkspaceManager, ModelType, mcp::{McpServer, MemoryTools}};
+use agent_memory_rs::{WorkspaceManager, ModelType, mcp::{McpServer, MemoryTools}};
 use anyhow::Result;
 use tracing_subscriber;
 

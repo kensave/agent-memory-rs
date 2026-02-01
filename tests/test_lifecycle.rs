@@ -1,8 +1,8 @@
-use agent_agent_memory_rs::models::dtos::Episode;
-use agent_agent_memory_rs::services::memory_manager::MemoryManager;
-use agent_agent_memory_rs::storage::database::Database;
-use agent_agent_memory_rs::traits::consolidation::ConsolidationEngine;
-use agent_agent_memory_rs::traits::memory_store::MemoryStore;
+use agent_memory_rs::models::dtos::Episode;
+use agent_memory_rs::services::memory_manager::MemoryManager;
+use agent_memory_rs::storage::database::Database;
+use agent_memory_rs::traits::consolidation::ConsolidationEngine;
+use agent_memory_rs::traits::memory_store::MemoryStore;
 use serde_json::json;
 use std::fs;
 

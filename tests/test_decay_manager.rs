@@ -100,7 +100,7 @@ async fn test_remove_inactive_procedures() {
     let proc_store = ProceduralMemoryStore::new(db.clone());
     let manager = DecayManager::new(db);
     
-    let procedure = memory_rs::models::dtos::Procedure {
+    let procedure = agent_memory_rs::models::dtos::Procedure {
         id: None,
         workspace_id,
         name: "Old procedure".to_string(),

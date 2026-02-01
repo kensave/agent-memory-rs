@@ -50,7 +50,7 @@ async fn test_cli_query() {
     }).unwrap();
 
     let manager = MemoryManager::new(db);
-    let memory = memory_rs::storage::memory_store::Memory {
+    let memory = agent_memory_rs::storage::memory_store::Memory {
         id: None,
         workspace_id,
         agent_id: None,

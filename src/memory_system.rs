@@ -15,6 +15,17 @@ impl MemorySystem {
         Ok(MemorySystem { db, embedder })
     }
 
+    pub fn new_with_model<P: AsRef<Path>>(db_path: P, model_type: ModelType) -> Result<Self> {
+        let db = Database::new(db_path)?;
+        let mut embedder = FastEmbedder::with_model(model_type)?;
+        embedder.load_model_sync()?;
+        Ok(MemorySystem { db, embedder })
+    }
+
+    pub fn load_model(&mut self) -> Result<()> {
+        self.embedder.load_model_sync()
+    }
+
     pub fn database(&self) -> &Database {
         &self.db
     }
@@ -88,7 +99,7 @@ mod tests {
         let db_path = "/tmp/test_memory_system.db";
         let _ = fs::remove_file(db_path);
 
-        let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
+        let system = MemorySystem::new_with_model(db_path, ModelType::MiniLM).unwrap();
 
         // Create workspace
         system.db.execute(|conn| {
@@ -147,7 +158,7 @@ mod tests {
         let db_path = "/tmp/test_batch_learning.db";
         let _ = fs::remove_file(db_path);
 
-        let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
+        let system = MemorySystem::new_with_model(db_path, ModelType::MiniLM).unwrap();
 
         let workspace_id = system.db.execute(|conn| {
             conn.execute(
@@ -193,7 +204,7 @@ mod tests {
         let db_path = "/tmp/test_search_filters.db";
         let _ = fs::remove_file(db_path);
 
-        let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
+        let system = MemorySystem::new_with_model(db_path, ModelType::MiniLM).unwrap();
 
         let workspace_id = system.db.execute(|conn| {
             conn.execute(
@@ -247,7 +258,7 @@ mod tests {
         let db_path = "/tmp/test_error_handling.db";
         let _ = fs::remove_file(db_path);
 
-        let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
+        let system = MemorySystem::new_with_model(db_path, ModelType::MiniLM).unwrap();
 
         let workspace_id = system.db.execute(|conn| {
             conn.execute(

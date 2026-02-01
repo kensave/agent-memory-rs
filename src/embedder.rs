@@ -32,9 +32,9 @@ impl FastEmbedder {
         })
     }
     
-    pub async fn load_model(&mut self) -> Result<()> {
+    pub fn load_model(&mut self) -> Result<()> {
         let downloader = ModelDownloader::new()?;
-        let (model_path, tokenizer_path) = downloader.download_model(self.model_type.repo_id()).await?;
+        let (model_path, tokenizer_path) = downloader.download_model(self.model_type.repo_id())?;
         
         // Load and configure tokenizer with padding (done once, not per-batch)
         let mut tokenizer = Tokenizer::from_file(&tokenizer_path)
@@ -48,27 +48,48 @@ impl FastEmbedder {
         // Load model
         let config = self.get_bert_config();
         let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[&model_path], DTYPE, &self.device)? };
+        let model = BertModel::load(vb, &config)?;
+        self.model = Some(model);
+        
+        Ok(())
+    }
+
+    pub fn load_model_sync(&mut self) -> Result<()> {
+        let downloader = ModelDownloader::new()?;
+        let (model_path, tokenizer_path) = downloader.download_model(self.model_type.repo_id())?;
+        
+        // Load and configure tokenizer
+        let mut tokenizer = Tokenizer::from_file(&tokenizer_path)
+            .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {}", e))?;
+        tokenizer.with_padding(Some(PaddingParams {
+            strategy: PaddingStrategy::BatchLongest,
+            ..Default::default()
+        }));
+        self.tokenizer = Some(tokenizer);
+        
+        // Load model
+        let config = self.get_bert_config();
+        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[&model_path], DTYPE, &self.device)? };
         self.model = Some(BertModel::load(vb, &config)?);
         
-        println!("Loaded model: {:?} on {:?}", self.model_type, self.device);
         Ok(())
     }
     
     pub fn embed(&self, text: &str) -> Result<Vec<f32>> {
-        match (&self.model, &self.tokenizer) {
-            (Some(model), Some(tokenizer)) => {
-                self.embed_batch_internal(&[text], model, tokenizer)?
-                    .into_iter().next().ok_or_else(|| anyhow::anyhow!("No embedding"))
-            }
-            _ => Ok(self.generate_mock_embedding(self.model_type.dimensions())),
-        }
+        let (model, tokenizer) = self.model.as_ref()
+            .zip(self.tokenizer.as_ref())
+            .ok_or_else(|| anyhow::anyhow!("Model not loaded. Call load_model_sync() first."))?;
+        
+        self.embed_batch_internal(&[text], model, tokenizer)?
+            .into_iter().next().ok_or_else(|| anyhow::anyhow!("No embedding"))
     }
     
     pub fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
-        match (&self.model, &self.tokenizer) {
-            (Some(model), Some(tokenizer)) => self.embed_batch_internal(texts, model, tokenizer),
-            _ => Ok(texts.iter().map(|_| self.generate_mock_embedding(self.model_type.dimensions())).collect()),
-        }
+        let (model, tokenizer) = self.model.as_ref()
+            .zip(self.tokenizer.as_ref())
+            .ok_or_else(|| anyhow::anyhow!("Model not loaded. Call load_model_sync() first."))?;
+        
+        self.embed_batch_internal(texts, model, tokenizer)
     }
     
     fn embed_batch_internal(&self, texts: &[&str], model: &BertModel, tokenizer: &Tokenizer) -> Result<Vec<Vec<f32>>> {
@@ -139,13 +160,6 @@ impl FastEmbedder {
                 use_cache: false, classifier_dropout: None, model_type: Some("bert".to_string()),
             },
         }
-    }
-    
-    fn generate_mock_embedding(&self, dims: usize) -> Vec<f32> {
-        let mut embedding: Vec<f32> = (0..dims).map(|i| ((i as f32 * 0.1) % 1.0) * 2.0 - 1.0).collect();
-        let norm: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
-        if norm > 0.0 { embedding.iter_mut().for_each(|v| *v /= norm); }
-        embedding
     }
 }
 

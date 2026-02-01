@@ -8,7 +8,7 @@ async fn benchmark_fair_comparison() {
     
     let mut embedder = FastEmbedder::with_model(ModelType::MiniLM).unwrap();
     
-    if embedder.load_model().await.is_err() {
+    if embedder.load_model_sync().is_err() {
         println!("⚠️  Model load failed");
         return;
     }

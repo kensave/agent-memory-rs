@@ -80,14 +80,58 @@ impl MemoryMcpServer {
         Ok(())
     }
     
-    /// Check if consolidation needed after message
-    async fn check_consolidation(&self) {
-        // Run initialization on first call
+    /// Ensure model is loaded on first use
+    async fn ensure_initialized(&self) -> Result<(), ErrorData> {
+        use std::fs::OpenOptions;
+        use std::io::Write;
+        
+        let log_path = "/tmp/mcp-memory-debug.log";
+        let mut log = OpenOptions::new().create(true).append(true).open(log_path).ok();
+        
+        if let Some(ref mut f) = log {
+            let _ = writeln!(f, "[{}] ensure_initialized called", chrono::Local::now().format("%H:%M:%S%.3f"));
+        }
+        
         let mut init = self.initialized.lock().await;
+        
+        if let Some(ref mut f) = log {
+            let _ = writeln!(f, "[{}] Lock acquired, initialized={}", chrono::Local::now().format("%H:%M:%S%.3f"), *init);
+        }
+        
         if !*init {
             *init = true;
-            drop(init); // Release lock before spawning
+            drop(init);
             
+            if let Some(ref mut f) = log {
+                let _ = writeln!(f, "[{}] Starting model load...", chrono::Local::now().format("%H:%M:%S%.3f"));
+            }
+            
+            // Load embedding model
+            tracing::info!("Loading embedding model on first use...");
+            let mut system = self.memory_system.lock().await;
+            
+            if let Some(ref mut f) = log {
+                let _ = writeln!(f, "[{}] System lock acquired, calling load_model...", chrono::Local::now().format("%H:%M:%S%.3f"));
+            }
+            
+            let result = system.load_model().map_err(|e| ErrorData::new(
+                ErrorCode::INTERNAL_ERROR,
+                format!("Failed to load model: {}", e),
+                None,
+            ))?;
+            
+            if let Some(ref mut f) = log {
+                let _ = writeln!(f, "[{}] Model loaded successfully!", chrono::Local::now().format("%H:%M:%S%.3f"));
+            }
+            
+            drop(system);
+            tracing::info!("Model loaded successfully");
+            
+            if let Some(ref mut f) = log {
+                let _ = writeln!(f, "[{}] Starting background consolidation...", chrono::Local::now().format("%H:%M:%S%.3f"));
+            }
+            
+            // Run initial consolidation in background
             tracing::info!("Running initial consolidation for yesterday");
             let yesterday = (chrono::Local::now() - chrono::Duration::days(1))
                 .format("%Y-%m-%d").to_string();
@@ -100,30 +144,43 @@ impl MemoryMcpServer {
                                      synopsis.key_insights.len());
                     }
                     Err(e) => {
-                        tracing::warn!("Initial consolidation failed (non-fatal): {}", e);
+                        tracing::warn!("Initial consolidation failed: {}", e);
                     }
                 }
             });
         }
         
-        // Check message count for periodic consolidation
+        if let Some(ref mut f) = log {
+            let _ = writeln!(f, "[{}] ensure_initialized complete", chrono::Local::now().format("%H:%M:%S%.3f"));
+        }
+        
+        Ok(())
+    }
+    
+    /// Check if consolidation needed after message
+    async fn check_consolidation(&self) {
         let mut count = self.message_count.lock().await;
         *count += 1;
         
         if *count >= self.consolidation_threshold {
-            tracing::info!("{} messages processed, triggering consolidation", *count);
+            *count = 0;
+            drop(count);
             
+            tracing::info!("Threshold reached, running consolidation");
             let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-            let manager = Arc::clone(&self.memory_manager);
             
+            let manager = Arc::clone(&self.memory_manager);
             tokio::spawn(async move {
                 match manager.consolidate(today).await {
-                    Ok(_) => tracing::info!("Auto-consolidation complete"),
-                    Err(e) => tracing::error!("Auto-consolidation failed: {}", e),
+                    Ok(synopsis) => {
+                        tracing::info!("Consolidation complete: {} insights", 
+                                     synopsis.key_insights.len());
+                    }
+                    Err(e) => {
+                        tracing::warn!("Consolidation failed: {}", e);
+                    }
                 }
             });
-            
-            *count = 0;
         }
     }
 }
@@ -267,6 +324,9 @@ impl ServerHandler for MemoryMcpServer {
         request: CallToolRequestParam,
         _context: RequestContext<RoleServer>,
     ) -> Result<CallToolResult, ErrorData> {
+        // Ensure model is loaded BEFORE acquiring any locks
+        self.ensure_initialized().await?;
+        
         let system = self.memory_system.lock().await;
 
         match request.name.as_ref() {

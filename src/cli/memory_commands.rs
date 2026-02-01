@@ -59,6 +59,22 @@ impl MemoryCLI {
         Ok(())
     }
 
+    pub fn delete_workspace(&self, workspace_id: i64) -> Result<()> {
+        println!("🗑️  Deleting workspace {}...", workspace_id);
+        
+        let deleted = self.db.execute(|conn| {
+            let rows = conn.execute("DELETE FROM workspaces WHERE id = ?1", [workspace_id])?;
+            Ok(rows)
+        })?;
+        
+        if deleted > 0 {
+            println!("✅ Workspace {} deleted (CASCADE: memories, episodes, procedures)", workspace_id);
+        } else {
+            println!("❌ Workspace {} not found", workspace_id);
+        }
+        Ok(())
+    }
+
     pub async fn consolidate(&self, date: String) -> Result<()> {
         println!("🔄 Consolidating memories for {}...", date);
         let synopsis = self.manager.consolidate(date).await?;

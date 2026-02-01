@@ -11,6 +11,7 @@ async fn main() -> Result<()> {
         println!("\nCommands:");
         println!("  workspace create --name NAME --path PATH");
         println!("  workspace list");
+        println!("  workspace delete --id ID");
         println!("  store --workspace ID --type TYPE --context TEXT [--outcome TEXT] [--valence FLOAT]");
         println!("  consolidate --date YYYY-MM-DD");
         println!("  synopsis --workspace ID --date YYYY-MM-DD");
@@ -35,6 +36,13 @@ async fn main() -> Result<()> {
                 }
                 "list" => {
                     cli.list_workspaces()?;
+                }
+                "delete" => {
+                    let id = args.iter().position(|a| a == "--id")
+                        .and_then(|i| args.get(i + 1))
+                        .and_then(|s| s.parse().ok())
+                        .expect("--id required");
+                    cli.delete_workspace(id)?;
                 }
                 _ => {
                     println!("Unknown workspace subcommand: {}", subcommand);
@@ -88,7 +96,7 @@ async fn main() -> Result<()> {
                 .and_then(|i| args.get(i + 1))
                 .and_then(|s| s.parse().ok())
                 .expect("--workspace required");
-            let threshold = args.iter().position(|a| a == "--threshold")
+            let _threshold = args.iter().position(|a| a == "--threshold")
                 .and_then(|i| args.get(i + 1))
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(0.3);
@@ -104,7 +112,7 @@ async fn main() -> Result<()> {
             // Find query text - skip command name, flags, and flag values
             let mut query_text = String::new();
             let mut skip_next = false;
-            for (i, arg) in args.iter().enumerate().skip(2) {
+            for (_i, arg) in args.iter().enumerate().skip(2) {
                 if skip_next {
                     skip_next = false;
                     continue;

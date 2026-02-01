@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
     println!("\n🔄 Attempting Real Model Loading:");
     let mut real_embedder = FastEmbedder::with_model(ModelType::MiniLM)?;
     
-    match real_embedder.load_model().await {
+    match real_embedder.load_model_sync() {
         Ok(()) => {
             println!("✅ Real model loaded successfully!");
             
