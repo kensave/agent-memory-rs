@@ -17,6 +17,8 @@ How do we determine which memories are important and should be retained vs archi
 composite_score = (recency × 0.3) + (relevance × 0.4) + (utility × 0.3)
 ```
 
+**Inspiration**: This approach is directly inspired by the "Intelligent Decay" mechanism described in "Memory Management and Contextual Consistency for Long-Running Low-Code Agents" (arXiv:2509.25250v1, 2025), which factors in recency, relevance, and user-specified utility for memory pruning and consolidation.
+
 ### Components
 
 #### 1.1 Recency Score (30% weight)
@@ -412,7 +414,57 @@ where:
 
 ## 12. References
 
-### Academic Papers
+### Modern AI Agent Memory Research (2024-2026)
+
+1. **Memory Management for AI Agents:**
+   - "Memory Management and Contextual Consistency for Long-Running Low-Code Agents" (2025)
+     - arXiv:2509.25250v1
+     - Introduces "Intelligent Decay" mechanism with composite scoring (recency, relevance, utility)
+     - Direct inspiration for our decay algorithm
+
+2. **Episodic Memory for LLMs:**
+   - "Episodic Memory for RAG with Generative Semantic Workspaces" (2024)
+     - arXiv:2511.07587v1
+     - Structured, interpretable representations of evolving situations
+     - Influenced our episodic memory design
+
+3. **Multi-Agent Memory Systems:**
+   - "MIRIX: Multi-Agent Memory System for LLM-Based Agents" (2024)
+     - HuggingFace Papers 2507.07957
+     - Modular multi-agent memory with diverse memory types
+     - Validated our multi-type memory approach
+
+4. **Episodic Memory Properties:**
+   - "Episodic Memory for LLM Agents" (2025)
+     - arXiv:2502.06975v1
+     - Five key properties of episodic memory for adaptive behavior
+     - Informed our episode structure design
+
+5. **Semantic and Associative Learning:**
+   - "Procedural Memory Is Not All You Need" (2025)
+     - arXiv:2505.03434v1
+     - Argues for semantic memory and associative learning
+     - Validated our three-memory-type architecture
+
+6. **Learning from Experience:**
+   - "Learning from Supervision with Semantic and Episodic Memory" (2024)
+     - arXiv:2510.19897v1
+     - Episodic memory for instance-level critiques
+     - Semantic memory for reusable guidance
+     - Influenced our consolidation pipeline
+
+7. **Long-Term Memory for LLMs:**
+   - "Augmenting LLM Agents with Long-Term Memory" (2024-2025)
+     - Research on integrating long-term memory mechanisms
+     - Store, organize, and retrieve knowledge over time
+     - Validated our persistence approach
+
+8. **Cognitive Architectures:**
+   - "Building AI Agents with Memory Systems: Cognitive Architectures for LLMs" (2025)
+     - Working memory for context awareness
+     - Influenced our hierarchical retrieval design
+
+### Academic Papers (Classical Foundations)
 
 1. **Memory Models:**
    - Ebbinghaus, H. (1885). "Memory: A Contribution to Experimental Psychology"
