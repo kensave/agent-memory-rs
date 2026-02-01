@@ -210,7 +210,7 @@ impl MemoryStore {
 
             let mut stmt = conn.prepare(&sql)?;
             let results = stmt.query_map(params_refs.as_slice(), |row| {
-                let distance: f64 = row.get(13)?;
+                let distance: f64 = row.get(16)?;  // distance is the last column
                 let similarity_score = 1.0 - distance;
                 let importance_score: f64 = row.get(5)?;
                 let combined_score = similarity_score * 0.7 + importance_score * 0.3;
