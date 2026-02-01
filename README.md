@@ -52,11 +52,25 @@ The MCP server automatically consolidates memories on startup and every 20 messa
   "mcpServers": {
     "agent-memory": {
       "command": "/path/to/agent-memory-mcp",
-      "args": ["my-workspace"]
+      "args": ["my-workspace"],
+      "env": {
+        "MEMORY_MODEL": "bge"
+      }
     }
   }
 }
 ```
+
+**Configuration Options:**
+
+| Environment Variable | Values | Default | Description |
+|---------------------|--------|---------|-------------|
+| `MEMORY_MODEL` | `bge`, `nomic`, `minilm` | `bge` | Embedding model to use |
+
+**Model Selection:**
+- **`bge`** (BGE-Small) - Best quality/speed balance, 384 dims, ~33MB ⭐ Recommended
+- **`nomic`** (Nomic Embed) - Best for long context (8K tokens), 768 dims, ~138MB
+- **`minilm`** (MiniLM) - Fastest, 384 dims, ~23MB
 
 **Available MCP Tools:**
 - `@memory/learn` - Store new memories

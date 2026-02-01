@@ -1,8 +1,65 @@
 # MCP Server with Auto-Consolidation
 
+## Configuration
+
+### Basic Setup
+
+```json
+{
+  "mcpServers": {
+    "agent-memory": {
+      "command": "/path/to/agent-memory-mcp",
+      "args": ["my-workspace"]
+    }
+  }
+}
+```
+
+### Advanced Configuration
+
+```json
+{
+  "mcpServers": {
+    "agent-memory": {
+      "command": "/path/to/agent-memory-mcp",
+      "args": ["my-workspace"],
+      "env": {
+        "MEMORY_MODEL": "bge"
+      }
+    }
+  }
+}
+```
+
+**Environment Variables:**
+
+| Variable | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `MEMORY_MODEL` | `bge`, `nomic`, `minilm` | `bge` | Embedding model |
+
+**Model Comparison:**
+
+- **`bge`** (BGE-Small) ⭐ **Recommended**
+  - Quality: ⭐⭐⭐⭐⭐ (Top MTEB scores)
+  - Speed: Fast (384 dims, ~33MB)
+  - Best for: General-purpose semantic search
+
+- **`nomic`** (Nomic Embed) 🚀 **Long Context**
+  - Quality: ⭐⭐⭐⭐⭐ (Beats OpenAI ada-002)
+  - Speed: Medium (768 dims, ~138MB)
+  - Context: 8192 tokens (vs 256)
+  - Best for: Long documents, complex queries
+
+- **`minilm`** (MiniLM) ⚡ **Fastest**
+  - Quality: ⭐⭐⭐ (Good baseline)
+  - Speed: Fastest (384 dims, ~23MB)
+  - Best for: Speed-critical applications
+
+---
+
 ## How It Works
 
-The MCP server now automatically consolidates memories:
+The MCP server automatically consolidates memories:
 
 ### **On Server Start**
 ```bash
