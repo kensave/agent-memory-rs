@@ -4,6 +4,14 @@
 
 A comprehensive memory management system for AI agents with episodic, semantic, and procedural memory types, intelligent consolidation, and decay mechanisms.
 
+## Documentation
+
+- **[Mathematical Foundations](MATHEMATICAL_FOUNDATIONS.md)** - Formulas, algorithms, and design rationale
+- **[MCP Auto-Consolidation](MCP_AUTO_CONSOLIDATION.md)** - How auto-consolidation works
+- **[Architecture](architecture-redesign.md)** - System architecture and design decisions
+- **[Interface Design](interface-design.md)** - SOLID principles and trait design
+- **[Schema](schema-extensions-v2.md)** - Database schema and migrations
+
 ## Architecture
 
 ### Core Components
