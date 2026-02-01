@@ -2,6 +2,8 @@
 
 **Production-ready memory system for AI agents with episodic, semantic, and procedural memory. Auto-consolidation, intelligent decay, and MCP server support.**
 
+> **Note:** This project is under active development. The entire codebase was generated and developed using [Kiro CLI](https://kiro.dev) - an AI-powered development assistant.
+
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
 
