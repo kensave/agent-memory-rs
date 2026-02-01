@@ -58,12 +58,35 @@ async fn main() -> Result<()> {
                 .and_then(|i| args.get(i + 1))
                 .and_then(|s| s.parse().ok())
                 .expect("--workspace required");
-            let query = args.get(2).expect("query text required");
+            
+            // Find query text - skip command name, flags, and flag values
+            let mut query_text = String::new();
+            let mut skip_next = false;
+            for (i, arg) in args.iter().enumerate().skip(2) {
+                if skip_next {
+                    skip_next = false;
+                    continue;
+                }
+                if arg.starts_with("--") {
+                    skip_next = true; // Skip the flag's value
+                    continue;
+                }
+                if !query_text.is_empty() {
+                    query_text.push(' ');
+                }
+                query_text.push_str(arg);
+            }
+            
+            if query_text.is_empty() {
+                eprintln!("Error: query text required");
+                return Ok(());
+            }
+            
             let limit = args.iter().position(|a| a == "--limit")
                 .and_then(|i| args.get(i + 1))
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(10);
-            cli.query(workspace_id, query, limit)?;
+            cli.query(workspace_id, &query_text, limit)?;
         }
         _ => {
             println!("Unknown command: {}", args[1]);
