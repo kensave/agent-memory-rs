@@ -1,82 +1,200 @@
-# Memory-RS: Agent Memory Management System
+# Agent Memory RS
 
-A comprehensive memory management system for AI agents with episodic, semantic, and procedural memory types, intelligent consolidation, and decay mechanisms. Built in Rust with SOLID principles.
+**Production-ready memory system for AI agents with episodic, semantic, and procedural memory. Auto-consolidation, intelligent decay, and MCP server support.**
 
-## 🎯 Features
+[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
 
-### Memory Types
-- **Episodic Memory**: Raw interaction events with full context, timestamps, and valence
-- **Semantic Memory**: Distilled knowledge with confidence scores and source tracking
-- **Procedural Memory**: Learned workflows with success rates and usage tracking
+A comprehensive memory management system for LLM agents implementing cognitive architectures based on modern AI research (2024-2026) and cognitive science foundations.
 
-### Core Capabilities
-- **Intelligent Consolidation**: Automatic pattern extraction and daily synopsis generation
-- **Hybrid Search**: BM25 keyword + vector semantic search with RRF fusion
-- **Hierarchical Retrieval**: Multi-level memory access (synopsis → semantic → episodic → archived)
-- **Smart Decay**: Composite scoring with automatic archival (recency×0.3 + relevance×0.4 + utility×0.3)
-- **MCP Server**: Auto-consolidation on startup and every N messages
-- **CLI Tools**: 5 commands for memory operations (consolidate, synopsis, stats, prune, query)
-- **Health Monitoring**: System metrics and health scoring
+## 🧠 Overview
 
-### Technical
-- **Persistent Storage**: SQLite with sqlite-vec extension (384-dim embeddings)
-- **Thread-Safe**: Arc<Mutex<Connection>> pattern, no lifetimes
-- **SOLID Architecture**: 5 traits with clean separation of concerns
-- **Test Coverage**: 44 integration tests, full lifecycle testing
-- **Performance**: Episode storage ~5ms, Search ~20ms, Consolidation ~2s
+Agent Memory RS provides three types of memory for AI agents:
+
+- **Episodic Memory** - Store interaction events with full context, timestamps, and emotional valence
+- **Semantic Memory** - Extract and consolidate knowledge with confidence tracking
+- **Procedural Memory** - Learn workflows and action sequences with success rates
+
+### Key Features
+
+✅ **Auto-Consolidation** - Nightly pattern extraction and daily synopsis generation  
+✅ **Intelligent Decay** - Composite scoring: `(recency×0.3) + (relevance×0.4) + (utility×0.3)`  
+✅ **Hybrid Search** - BM25 keyword + vector semantic search with RRF fusion  
+✅ **Hierarchical Retrieval** - Multi-level memory access (synopsis → semantic → episodic → archived)  
+✅ **MCP Server** - Model Context Protocol integration for Claude and other AI assistants  
+✅ **CLI Tools** - 5 commands for memory operations  
+✅ **Health Monitoring** - System metrics and health scoring  
+✅ **Production Ready** - 44 integration tests, SOLID architecture, thread-safe  
 
 ## 🚀 Quick Start
 
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/memory-rs
-cd memory-rs
+git clone https://github.com/yourusername/agent-memory-rs
+cd agent-memory-rs
 cargo build --release
-
-# Install binaries
-cargo install --path .
 ```
 
-### MCP Server
+### MCP Server (Recommended)
 
-Start the MCP server (auto-consolidates on startup):
+The MCP server automatically consolidates memories on startup and every 20 messages:
 
 ```bash
-# Development
-cargo run --bin memory-rs-mcp my-workspace
-
-# Production
-./target/release/memory-rs-mcp my-workspace
+# Start the server
+./target/release/agent-memory-mcp my-workspace
 ```
 
-Add to your AI agent's MCP configuration (e.g., Claude Desktop `config.json`):
+**Configure your AI assistant** (e.g., Claude Desktop `~/.config/claude/config.json`):
 
 ```json
 {
   "mcpServers": {
-    "memory-rs": {
-      "command": "/path/to/memory-rs-mcp",
+    "agent-memory": {
+      "command": "/path/to/agent-memory-mcp",
       "args": ["my-workspace"]
     }
   }
 }
 ```
 
+**Available MCP Tools:**
+- `@memory/learn` - Store new memories
+- `@memory/search` - Search across all memory types
+
 ### CLI Usage
 
 ```bash
 # View daily synopsis
-memory-cli synopsis --date 2026-01-31
+cargo run --bin agent-memory-cli synopsis --date 2026-01-31
 
 # Query memories
-memory-cli query "rust programming" --limit 10
+cargo run --bin agent-memory-cli query "rust programming" --limit 10
 
 # Check system health
-memory-cli stats --workspace 1
+cargo run --bin agent-memory-cli stats --workspace 1
 
-# Consolidate memories
-memory-cli consolidate --date 2026-01-31
+# Manual consolidation
+cargo run --bin agent-memory-cli consolidate --date 2026-01-31
+
+# Prune old memories
+cargo run --bin agent-memory-cli prune --threshold 0.3 --dry-run
+```
+
+### Programmatic Usage
+
+```rust
+use agent_memory_rs::services::MemoryManager;
+use agent_memory_rs::storage::Database;
+
+// Initialize
+let db = Database::new("memory.db")?;
+let manager = MemoryManager::new(db.clone());
+
+// Store episode
+manager.store_episode(
+    1, // workspace_id
+    "user_query",
+    serde_json::json!({"query": "How do I use Rust?"}),
+    Some("Provided Rust tutorial"),
+    Some(0.8), // positive valence
+)?;
+
+// Search memories
+let results = manager.retrieve("rust programming", 1, 10)?;
+
+// Get daily synopsis
+let synopsis = manager.get_synopsis(1, "2026-01-31")?;
+
+// Consolidate
+manager.consolidate(1, "2026-01-31")?;
+```
+
+## 📚 Documentation
+
+- **[Getting Started Guide](docs/README.md)** - Complete API reference and examples
+- **[Design Rationale](docs/DESIGN_RATIONALE.md)** - Design decisions, formulas, algorithms, and research
+- **[MCP Server Guide](docs/MCP_AUTO_CONSOLIDATION.md)** - How auto-consolidation works
+- **[Architecture](docs/architecture-redesign.md)** - System architecture and design decisions
+- **[Implementation Plan](docs/IMPLEMENTATION_PLAN.md)** - Development roadmap and completion status
+
+## 🏗️ Architecture
+
+```
+MemoryManager (Facade)
+    ├── EpisodicMemoryStore      - Raw interaction events
+    ├── SemanticMemoryStore      - Distilled knowledge
+    ├── ProceduralMemoryStore    - Learned workflows
+    ├── HybridRetrievalEngine    - BM25 + Vector search
+    ├── ConsolidationEngine      - Pattern extraction
+    ├── DecayManager             - Intelligent archival
+    ├── SynopsisGenerator        - Daily briefs
+    └── HealthMonitor            - System metrics
+```
+
+**Built with SOLID principles:**
+- 5 core traits (IMemoryStore, IRetriever, IConsolidator, IDecay, IEmbedder)
+- Dependency injection throughout
+- Thread-safe Database pattern: `Arc<Mutex<Connection>>`
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+cargo test
+
+# Run integration tests only
+cargo test --test '*'
+
+# Run with output
+cargo test -- --nocapture
+```
+
+**Test Coverage:** 44 integration tests covering full lifecycle
+
+## 📊 Performance
+
+- **Episode Storage:** ~5ms
+- **Hybrid Search:** ~20ms (10k memories)
+- **Daily Consolidation:** ~2s
+- **Synopsis Generation:** ~500ms
+
+## 🔬 Research Foundation
+
+Based on modern AI agent memory research:
+
+1. **Memory Management for Long-Running Agents** (2025, arXiv:2509.25250v1)
+2. **Episodic Memory for RAG** (2024, arXiv:2511.07587v1)
+3. **MIRIX Multi-Agent Memory** (2024)
+4. **Episodic Memory Properties** (2025, arXiv:2502.06975v1)
+5. **Procedural Memory Is Not All You Need** (2025, arXiv:2505.03434v1)
+
+See [Design Rationale](docs/DESIGN_RATIONALE.md) for complete references.
+
+## 🛠️ Technology Stack
+
+- **Language:** Rust 1.70+
+- **Database:** SQLite with `sqlite-vec` extension
+- **Embeddings:** BERT MiniLM (384 dimensions) via Candle
+- **Vector Search:** Cosine distance with HNSW-like indexing
+- **Interface:** MCP (Model Context Protocol)
+
+## 📝 License
+
+Licensed under either of:
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT license ([LICENSE-MIT](LICENSE-MIT))
+
+at your option.
+
+## 🤝 Contributing
+
+Contributions welcome! Please read our contributing guidelines first.
+
+## 🙏 Acknowledgments
+
+Inspired by cognitive science research on human memory systems and modern AI agent architectures.
 
 # Prune old memories
 memory-cli prune --workspace 1 --dry-run

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use memory_rs::mcp::MemoryMcpServer;
+use agent_memory_rs::mcp::MemoryMcpServer;
 use rmcp::{transport::stdio, ServiceExt};
 use tracing_subscriber::EnvFilter;
 

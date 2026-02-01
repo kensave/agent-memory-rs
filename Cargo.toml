@@ -1,10 +1,13 @@
 [package]
-name = "memory-rs"
+name = "agent-memory-rs"
 version = "0.1.0"
 edition = "2021"
-description = "Neural memory systems with surprise-based learning and retention gates"
+description = "Production-ready memory system for AI agents with episodic, semantic, and procedural memory. Auto-consolidation, intelligent decay, and MCP server support."
 authors = ["Kenneth <kenneth@example.com>"]
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/agent-memory-rs"
+keywords = ["ai", "agent", "memory", "llm", "mcp"]
+categories = ["science", "algorithms"]
 
 [features]
 default = []
@@ -34,5 +37,9 @@ chrono = "0.4.43"
 tokio-test = "0.4"
 
 [[bin]]
-name = "memory-rs-mcp"
+name = "agent-memory-mcp"
 path = "src/bin/mcp_server.rs"
+
+[[bin]]
+name = "agent-memory-cli"
+path = "src/bin/cli.rs"

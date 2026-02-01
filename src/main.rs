@@ -1,4 +1,4 @@
-use memory_rs::{FastEmbedder, ModelType};
+use agent_memory_rs::{FastEmbedder, ModelType};
 use std::time::Instant;
 
 #[tokio::main]

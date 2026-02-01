@@ -77,7 +77,7 @@ let synopsis = manager.consolidate("2026-01-31".to_string()).await?;
 
 ```bash
 # Start MCP server
-cargo run --bin memory-rs-mcp my-workspace
+cargo run --bin agent-memory-mcp my-workspace
 
 # View statistics
 memory-cli stats --workspace 1

@@ -6,9 +6,9 @@ The MCP server now automatically consolidates memories:
 
 ### **On Server Start**
 ```bash
-cargo run --bin memory-rs-mcp my-workspace
+cargo run --bin agent-memory-mcp my-workspace
 # Or after building:
-./target/release/memory-rs-mcp my-workspace
+./target/release/agent-memory-mcp my-workspace
 ```
 
 **What happens:**
@@ -199,9 +199,9 @@ memory-cli consolidate --date 2026-01-31
 
 ```bash
 # Start server
-$ cargo run --bin memory-rs-mcp my-project
+$ cargo run --bin agent-memory-mcp my-project
 # Or:
-$ ./target/release/memory-rs-mcp my-project
+$ ./target/release/agent-memory-mcp my-project
 
 🚀 Memory MCP Server initializing...
 🔄 Consolidating memories from 2026-01-30...
