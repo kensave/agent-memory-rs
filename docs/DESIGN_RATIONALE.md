@@ -1,8 +1,8 @@
-# Memory System: Mathematical Foundations & Design Rationale
+# Memory System: Design Rationale & Mathematical Foundations
 
 ## Overview
 
-This document explains the mathematical foundations, algorithms, and design decisions behind the memory-rs agent memory management system.
+This document explains the design decisions, mathematical foundations, algorithms, and research behind the memory-rs agent memory management system.
 
 ---
 

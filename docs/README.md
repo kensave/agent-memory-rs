@@ -6,7 +6,7 @@ A comprehensive memory management system for AI agents with episodic, semantic, 
 
 ## Documentation
 
-- **[Mathematical Foundations](MATHEMATICAL_FOUNDATIONS.md)** - Formulas, algorithms, and design rationale
+- **[Design Rationale](DESIGN_RATIONALE.md)** - Design decisions, formulas, algorithms, and research
 - **[MCP Auto-Consolidation](MCP_AUTO_CONSOLIDATION.md)** - How auto-consolidation works
 - **[Architecture](architecture-redesign.md)** - System architecture and design decisions
 - **[Interface Design](interface-design.md)** - SOLID principles and trait design
