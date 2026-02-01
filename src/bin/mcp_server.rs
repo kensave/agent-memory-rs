@@ -20,7 +20,24 @@ async fn main() -> Result<()> {
         .or_else(|| {
             std::env::current_dir()
                 .ok()
-                .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
+                .map(|p| {
+                    // Generate hash-prefixed name: <hash>-<dirname>
+                    // This ensures uniqueness across different paths with same directory name
+                    use std::collections::hash_map::DefaultHasher;
+                    use std::hash::{Hash, Hasher};
+                    
+                    let full_path = p.to_string_lossy();
+                    let mut hasher = DefaultHasher::new();
+                    full_path.hash(&mut hasher);
+                    let hash = hasher.finish();
+                    
+                    let dir_name = p.file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "root".to_string());
+                    
+                    // Format: first 8 chars of hash + directory name
+                    format!("{:08x}-{}", hash, dir_name)
+                })
         })
         .unwrap_or_else(|| "default".to_string());
 
