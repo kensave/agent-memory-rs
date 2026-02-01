@@ -129,8 +129,6 @@ manager.consolidate(1, "2026-01-31")?;
 - **[Getting Started Guide](docs/README.md)** - Complete API reference and examples
 - **[Design Rationale](docs/DESIGN_RATIONALE.md)** - Design decisions, formulas, algorithms, and research
 - **[MCP Server Guide](docs/MCP_AUTO_CONSOLIDATION.md)** - How auto-consolidation works
-- **[Architecture](docs/architecture-redesign.md)** - System architecture and design decisions
-- **[Implementation Plan](docs/IMPLEMENTATION_PLAN.md)** - Development roadmap and completion status
 
 ## 🎓 Agent Skill
 
