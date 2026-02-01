@@ -15,6 +15,77 @@
 - **Traits** (6 files, ~110 LOC) - SOLID interfaces
 - **CLI** (2 files, ~125 LOC) - Command-line tools
 
+## Architecture Overview
+
+### Core Services (`src/services/`)
+
+**Memory Stores:**
+- `EpisodicMemoryStore` - Raw interaction events (220 LOC)
+- `ProceduralMemoryStore` - Learned workflows (163 LOC)
+- `SemanticMemoryStore` - Distilled knowledge (in `storage/memory_store.rs`)
+
+**Processing Engines:**
+- `ConsolidationEngine` - Pattern extraction and consolidation (179 LOC)
+- `HybridRetrievalEngine` - BM25 + vector search (198 LOC)
+- `PatternExtractor` - Recurring pattern detection (171 LOC)
+- `SynopsisGenerator` - Daily brief generation (158 LOC)
+- `DecayManager` - Intelligent archival (162 LOC)
+
+**Utilities:**
+- `CompositeScoreCalculator` - Memory scoring (93 LOC)
+- `ContextInjectionService` - Token budget management (84 LOC)
+- `HealthMonitor` - System metrics (84 LOC)
+
+**Facade:**
+- `MemoryManager` - Unified API (156 LOC)
+
+### Storage Layer (`src/storage/`)
+
+- `Database` - SQLite with migrations (224 LOC)
+- `MemoryStore` - CRUD + semantic search (360 LOC)
+- `schema.rs` - Database initialization (204 LOC)
+
+### MCP Integration (`src/mcp/`)
+
+- `MemoryMcpServer` - MCP protocol server (366 LOC)
+- `tools.rs` - Learn/search tools (392 LOC)
+- `server.rs` - JSON-RPC server (250 LOC)
+
+### Core Components (`src/`)
+
+- `MemorySystem` - Main orchestrator (285 LOC)
+- `FastEmbedder` - BERT embeddings (162 LOC)
+- `WorkspaceManager` - Multi-workspace support (234 LOC)
+- `ModelDownloader` - Model fetching (63 LOC)
+
+### CLI (`src/cli/`)
+
+- `MemoryCLI` - Command-line interface (123 LOC)
+
+### Traits (`src/traits/`)
+
+SOLID interface definitions:
+- `memory_store.rs` - IMemoryStore trait
+- `retriever.rs` - IRetriever trait
+- `consolidation.rs` - IConsolidationEngine trait
+- `decay.rs` - IDecayManager trait
+- `embedder.rs` - IEmbedder trait
+
+### Models (`src/models/`)
+
+- `dtos.rs` - Data transfer objects (Episode, Procedure, Synopsis, Pattern)
+- `types.rs` - Enums (ModelType, QuantizationType)
+
+### Tests (`tests/`)
+
+44 integration tests covering:
+- Memory lifecycle
+- Store operations (episodic, procedural, semantic)
+- Consolidation and pattern extraction
+- Hybrid retrieval
+- CLI commands
+- Health monitoring
+
 ## Overview
 
 Memory-RS provides a comprehensive memory management system for AI agents with three memory types: episodic (raw events), semantic (distilled knowledge), and procedural (learned workflows). Memories are workspace-scoped with automatic consolidation and intelligent decay.
