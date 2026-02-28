@@ -151,6 +151,9 @@ impl MemoryTools {
             return Err(anyhow!("Text cannot be empty"));
         }
 
+        // Auto-generate timestamp if not provided
+        let created_at = Some(chrono::Utc::now().to_rfc3339());
+
         let memory = Memory {
             id: None,
             workspace_id: request.workspace_id,
@@ -166,7 +169,7 @@ impl MemoryTools {
             source_episodes: vec![],
             confidence: 0.5,
             last_validated: None,
-            created_at: None,
+            created_at,  // Auto-generated timestamp
             updated_at: None,
         };
 

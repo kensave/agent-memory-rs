@@ -92,19 +92,73 @@ impl HybridRetrievalEngine {
     }
 
     pub fn hybrid_search(&self, query: &str, workspace_id: i64, limit: usize) -> Result<Vec<HybridSearchResult>> {
+        // Get BM25 results
         let bm25_results = self.search_bm25(query, workspace_id, limit * 2)?;
         
-        // RRF fusion
+        // Get vector results if embedder available
+        let vector_results = if let Some(ref embedder) = self.embedder {
+            let query_emb = embedder.lock()
+                .map_err(|_| anyhow::anyhow!("Failed to acquire embedder lock"))?
+                .embed(query)?;
+            
+            let embedding_blob: Vec<u8> = query_emb.iter()
+                .flat_map(|&f| f.to_le_bytes())
+                .collect();
+            
+            self.db.execute(|conn| {
+                let mut stmt = conn.prepare(
+                    "SELECT m.id, m.text, vec_distance_cosine(v.embedding, ?1) AS distance
+                     FROM memories m
+                     JOIN vec0 v ON v.memory_id = m.id
+                     WHERE m.workspace_id = ?
+                     ORDER BY distance ASC
+                     LIMIT ?"
+                )?;
+                
+                let rows = stmt.query_map(rusqlite::params![embedding_blob, workspace_id, limit * 2], |row| {
+                    let id: i64 = row.get(0)?;
+                    let text: String = row.get(1)?;
+                    let distance: f64 = row.get(2)?;
+                    
+                    Ok(HybridSearchResult {
+                        memory_type: "semantic".to_string(),
+                        content: text,
+                        score: 1.0 - distance,
+                        id,
+                    })
+                })?;
+                
+                Ok(rows.filter_map(Result::ok).collect::<Vec<_>>())
+            })?
+        } else {
+            Vec::new()
+        };
+        
+        // RRF fusion: combine BM25 and vector rankings
         let mut fused_scores: HashMap<i64, f64> = HashMap::new();
         
+        // Add BM25 scores
         for (rank, result) in bm25_results.iter().enumerate() {
             let rrf_score = 1.0 / (60.0 + rank as f64);
             *fused_scores.entry(result.id).or_insert(0.0) += rrf_score;
         }
-
-        let mut final_results: Vec<HybridSearchResult> = bm25_results.into_iter()
-            .map(|mut r| {
-                r.score = *fused_scores.get(&r.id).unwrap_or(&0.0);
+        
+        // Add vector scores
+        for (rank, result) in vector_results.iter().enumerate() {
+            let rrf_score = 1.0 / (60.0 + rank as f64);
+            *fused_scores.entry(result.id).or_insert(0.0) += rrf_score;
+        }
+        
+        // Combine all unique results
+        let mut all_results: HashMap<i64, HybridSearchResult> = HashMap::new();
+        for result in bm25_results.into_iter().chain(vector_results.into_iter()) {
+            all_results.entry(result.id).or_insert(result);
+        }
+        
+        // Apply fused scores
+        let mut final_results: Vec<HybridSearchResult> = all_results.into_iter()
+            .map(|(id, mut r)| {
+                r.score = *fused_scores.get(&id).unwrap_or(&0.0);
                 r
             })
             .collect();

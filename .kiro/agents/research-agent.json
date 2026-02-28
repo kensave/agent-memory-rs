@@ -18,11 +18,12 @@
     "file://.kiro/SubAgents.md",
     "file://.kiro/agents/*.json",
     "file://README.md",
-    "file://.kiro/projects/memory-rs/*.md"
+    "file://.kiro/projects/memory-rs/*.md",
+    "skill://skill/agent-memory/SKILL.md"
   ],
   "mcpServers": {
     "memory": {
-      "command": "<project-root>/target/release/agent-memory-mcp",
+      "command": "/Users/kenneth/workspace/memory-rs/target/release/agent-memory-mcp",
       "args": ["memory-rs-workspace"],
       "env": {
         "MEMORY_MODEL": "bge"

@@ -130,37 +130,6 @@ fn dimensions(&self) -> usize
 
 ---
 
-### 4. ConsolidationEngine
-
-**Purpose**: Orchestrate memory consolidation
-
-**Responsibilities**:
-- Daily consolidation workflow
-- Pattern extraction
-- Synopsis generation
-
-**Generic Types**:
-- `Synopsis`: Synopsis type
-- `Pattern`: Pattern type
-
-**Methods**:
-```rust
-async fn consolidate_daily(&self, date: String) -> Result<Self::Synopsis>
-async fn extract_patterns(&self, episode_ids: Vec<i64>) -> Result<Vec<Self::Pattern>>
-async fn generate_synopsis(&self, date: String) -> Result<Self::Synopsis>
-```
-
-**Implementations**:
-- `DefaultConsolidationEngine` (main implementation)
-- `TestConsolidationEngine` (for testing)
-
-**Dependencies** (via DIP):
-- `MemoryStore` (to retrieve episodes)
-- `MemoryRetriever` (to search patterns)
-- `EmbeddingService` (to generate synopsis embeddings)
-
----
-
 ## Data Transfer Objects (DTOs)
 
 ### Episode
@@ -191,106 +160,12 @@ pub struct Episode {
 
 ---
 
-### Procedure
-```rust
-pub struct Procedure {
-    pub id: Option<i64>,
-    pub workspace_id: i64,
-    pub name: String,
-    pub trigger_conditions: serde_json::Value,
-    pub action_sequence: serde_json::Value,
-    pub success_rate: f64,
-    pub usage_count: i64,
-    pub last_used: Option<String>,
-    pub learned_from: Vec<i64>,
-    pub created_at: Option<String>,
-}
-```
-
-**Purpose**: Store learned workflows and action sequences
-
-**Fields**:
-- `trigger_conditions`: JSON conditions that trigger this procedure
-- `action_sequence`: JSON array of actions to execute
-- `success_rate`: 0.0 to 1.0 success rate
-- `usage_count`: Number of times used
-- `learned_from`: Episode IDs that led to this procedure
-
----
-
-### Synopsis
-```rust
-pub struct Synopsis {
-    pub date: String,
-    pub workspace_id: i64,
-    pub agent_id: Option<i64>,
-    pub summary: String,
-    pub key_insights: Vec<String>,
-    pub new_knowledge_ids: Vec<i64>,
-    pub new_procedure_ids: Vec<i64>,
-    pub stats: serde_json::Value,
-    pub created_at: Option<String>,
-}
-```
-
-**Purpose**: Daily consolidated summary
-
-**Fields**:
-- `summary`: Natural language summary of the day
-- `key_insights`: Top 5 insights extracted
-- `new_knowledge_ids`: IDs of new semantic memories created
-- `new_procedure_ids`: IDs of new procedures learned
-- `stats`: JSON with metrics (conversations, tasks, success rate)
-
----
-
-### Pattern
-```rust
-pub struct Pattern {
-    pub pattern_type: String,
-    pub description: String,
-    pub frequency: i64,
-    pub confidence: f64,
-    pub source_episodes: Vec<i64>,
-}
-```
-
-**Purpose**: Extracted pattern from episodic memories
-
-**Fields**:
-- `pattern_type`: "user_preference", "workflow", "error_pattern", etc.
-- `description`: Natural language description
-- `frequency`: Number of occurrences
-- `confidence`: 0.0 to 1.0 confidence score
-- `source_episodes`: Episode IDs supporting this pattern
-
----
-
-### CompositeScore
-```rust
-pub struct CompositeScore {
-    pub recency: f64,
-    pub relevance: f64,
-    pub utility: f64,
-    pub combined: f64,
-}
-```
-
-**Purpose**: Memory importance score components
-
-**Formula**:
-```
-combined = (recency × 0.3) + (relevance × 0.4) + (utility × 0.3)
-```
-
----
-
 ## Dependency Injection Pattern
 
-### Example: ConsolidationEngine Implementation
+### Example: MemoryManager Implementation
 
 ```rust
-pub struct DefaultConsolidationEngine<S, R, E>
+pub struct MemoryManager<S, R, E>
 where
     S: MemoryStore,
     R: MemoryRetriever,
@@ -301,7 +176,7 @@ where
     embedder: Arc<E>,
 }
 
-impl<S, R, E> DefaultConsolidationEngine<S, R, E>
+impl<S, R, E> MemoryManager<S, R, E>
 where
     S: MemoryStore,
     R: MemoryRetriever,
@@ -337,7 +212,7 @@ where
 
 ### Integration Tests
 - Test trait implementations together
-- Example: Test `ConsolidationEngine` with real stores
+- Example: Test `MemoryManager` with real stores
 
 ### Contract Tests
 - Verify trait implementations honor contracts

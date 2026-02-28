@@ -3,6 +3,71 @@ use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
 
+// Parse LoCoMo timestamp format: "1:56 pm on 8 May, 2023"
+fn parse_locomo_timestamp(datetime_str: &str) -> Option<String> {
+    use chrono::{NaiveDateTime, TimeZone, Utc};
+    
+    // Parse format: "1:56 pm on 8 May, 2023"
+    let parts: Vec<&str> = datetime_str.split(" on ").collect();
+    if parts.len() != 2 {
+        return None;
+    }
+    
+    let time_str = parts[0];
+    let date_str = parts[1];
+    
+    // Parse date: "8 May, 2023"
+    let date_parts: Vec<&str> = date_str.split(", ").collect();
+    if date_parts.len() != 2 {
+        return None;
+    }
+    
+    let day_month: Vec<&str> = date_parts[0].split(' ').collect();
+    if day_month.len() != 2 {
+        return None;
+    }
+    
+    let day = day_month[0].parse::<u32>().ok()?;
+    let month_str = day_month[1];
+    let year = date_parts[1].parse::<i32>().ok()?;
+    
+    let month = match month_str {
+        "January" | "Jan" => 1, "February" | "Feb" => 2, "March" | "Mar" => 3,
+        "April" | "Apr" => 4, "May" => 5, "June" | "Jun" => 6,
+        "July" | "Jul" => 7, "August" | "Aug" => 8, "September" | "Sep" => 9,
+        "October" | "Oct" => 10, "November" | "Nov" => 11, "December" | "Dec" => 12,
+        _ => return None,
+    };
+    
+    // Parse time: "1:56 pm"
+    let time_parts: Vec<&str> = time_str.split(':').collect();
+    if time_parts.len() != 2 {
+        return None;
+    }
+    
+    let mut hour = time_parts[0].trim().parse::<u32>().ok()?;
+    let min_ampm: Vec<&str> = time_parts[1].trim().split(' ').collect();
+    if min_ampm.len() != 2 {
+        return None;
+    }
+    
+    let minute = min_ampm[0].parse::<u32>().ok()?;
+    let ampm = min_ampm[1].to_lowercase();
+    
+    if ampm == "pm" && hour != 12 {
+        hour += 12;
+    } else if ampm == "am" && hour == 12 {
+        hour = 0;
+    }
+    
+    let naive_dt = NaiveDateTime::parse_from_str(
+        &format!("{}-{:02}-{:02} {:02}:{:02}:00", year, month, day, hour, minute),
+        "%Y-%m-%d %H:%M:%S"
+    ).ok()?;
+    
+    Some(Utc.from_utc_datetime(&naive_dt).to_rfc3339())
+}
+
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
@@ -66,6 +131,14 @@ fn main() -> anyhow::Result<()> {
     let mut memories_loaded = 0;
     for session_key in sessions {
         let session_num = session_key.replace("session_", "");
+        
+        // Get session timestamp
+        let datetime_key = format!("session_{}_date_time", session_num);
+        let session_datetime = conversation.get(&datetime_key)
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let session_timestamp = parse_locomo_timestamp(session_datetime);
+        
         let turns = conversation[&session_key].as_array().unwrap();
         
         for turn in turns {
@@ -91,7 +164,7 @@ fn main() -> anyhow::Result<()> {
                 source_episodes: vec![],
                 confidence: 0.5,
                 last_validated: None,
-                created_at: None,
+                created_at: session_timestamp.clone(),
                 updated_at: None,
             };
             
