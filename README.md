@@ -1,7 +1,7 @@
 # Agent Memory RS
 
 <p align="center">
-  <img src="logo.png" alt="Agent Memory RS Logo" width="200"/>
+  <img src="logo.png" alt="Agent Memory RS Logo" width="300"/>
 </p>
 
 **Episodic memory system for AI agents with vector search, exposed via MCP server.**
