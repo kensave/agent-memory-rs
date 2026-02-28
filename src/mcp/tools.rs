@@ -170,7 +170,8 @@ impl MemoryTools {
             updated_at: None,
         };
 
-        let system = self.memory_system.lock().unwrap();
+        let system = self.memory_system.lock()
+            .map_err(|_| anyhow!("Failed to acquire memory system lock"))?;
         let memory_id = system.learn(&memory)?;
 
         let response = LearnResponse {
@@ -205,7 +206,8 @@ impl MemoryTools {
             conversation_id: request.conversation_id,
         };
 
-        let system = self.memory_system.lock().unwrap();
+        let system = self.memory_system.lock()
+            .map_err(|_| anyhow!("Failed to acquire memory system lock"))?;
         let results = system.search(&request.query, &filters, request.limit)?;
 
         let items: Vec<SearchResultItem> = results.into_iter().map(|r| SearchResultItem {

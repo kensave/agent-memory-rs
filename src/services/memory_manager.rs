@@ -19,6 +19,7 @@ pub struct MemoryManager {
 }
 
 impl MemoryManager {
+    /// Create a new MemoryManager with default embedder
     pub fn new(db: Database) -> Self {
         Self {
             episodic: EpisodicMemoryStore::new(db.clone()),
@@ -29,6 +30,7 @@ impl MemoryManager {
         }
     }
     
+    /// Create a new MemoryManager with custom embedder
     pub fn with_embedder(db: Database, embedder: Arc<Mutex<FastEmbedder>>) -> Self {
         Self {
             episodic: EpisodicMemoryStore::with_embedder(db.clone(), embedder.clone()),

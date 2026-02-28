@@ -13,11 +13,10 @@ A comprehensive memory management system for LLM agents implementing cognitive a
 
 ## 🧠 Overview
 
-Agent Memory RS provides three types of memory for AI agents:
+Agent Memory RS provides two types of memory for AI agents:
 
 - **Episodic Memory** - Store interaction events with full context, timestamps, and emotional valence
 - **Semantic Memory** - Extract and consolidate knowledge with confidence tracking
-- **Procedural Memory** - Learn workflows and action sequences with success rates
 
 ### Key Features
 
@@ -41,7 +40,6 @@ Agent Memory RS provides three types of memory for AI agents:
 - ✅ Hierarchical retrieval across all memory types
 - ✅ Auto-consolidation (startup + every 20 messages)
 - ✅ Pattern extraction creating semantic memories
-- ✅ Procedural memory creation from workflows
 - ✅ Daily synopsis generation with stats
 
 **CLI-Only Features:**
@@ -51,9 +49,7 @@ Agent Memory RS provides three types of memory for AI agents:
 
 **Not Yet Implemented:**
 - ❌ Automatic decay/archival (must use CLI)
-- ❌ Synopsis embeddings (not searchable)
-- ❌ Procedural memory embeddings (BM25-only)
-- ❌ Dedicated MCP tool for procedures  
+- ❌ Synopsis embeddings (not searchable)  
 
 ## 🚀 Quick Start
 
@@ -239,7 +235,7 @@ MemoryManager (Facade)
 ```
 
 **Built with SOLID principles:**
-- 5 core traits (MemoryStore, MemoryRetriever, ConsolidationEngine, DecayManager, EmbeddingService)
+- 5 core traits (MemoryStore, MemoryRetriever, ConsolidationEngine, EmbeddingService, PatternExtractor)
 - Dependency injection throughout
 - Thread-safe Database pattern: `Arc<Mutex<Connection>>`
 
@@ -256,7 +252,7 @@ cargo test --test '*'
 cargo test -- --nocapture
 ```
 
-**Test Coverage:** 38 integration tests covering full lifecycle
+**Test Coverage:** 29 tests covering full lifecycle
 
 ## 📊 Performance
 
@@ -319,7 +315,7 @@ cargo test --test '*'
 cargo test -- --nocapture
 ```
 
-**Test Coverage:** 38 integration tests covering full lifecycle
+**Test Coverage:** 29 tests covering full lifecycle
 
 ## 🔧 Development
 

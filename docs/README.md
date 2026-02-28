@@ -205,12 +205,12 @@ cargo test --quiet
 ### Integration Tests
 
 - `test_episodic_store` - Episode CRUD
-- `test_procedural_store` - Procedure operations
 - `test_semantic_extensions` - Knowledge tracking
 - `test_consolidation_engine` - Full pipeline
-- `test_lifecycle` - End-to-end workflow
+- `test_hybrid_retrieval` - BM25 + vector search
+- `test_full_pipeline` - End-to-end workflow
 
-Total: 44 integration tests
+Total: 29 tests
 
 ## SOLID Principles
 

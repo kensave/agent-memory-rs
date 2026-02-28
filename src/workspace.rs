@@ -10,6 +10,7 @@ pub struct WorkspaceManager {
 }
 
 impl WorkspaceManager {
+    /// Create a new WorkspaceManager with default base directory (~/.memory-rs/workspaces)
     pub fn new(model_type: ModelType) -> Result<Self> {
         let home = dirs::home_dir().ok_or_else(|| anyhow!("Cannot find home directory"))?;
         let base_dir = home.join(".memory-rs").join("workspaces");
@@ -18,12 +19,14 @@ impl WorkspaceManager {
         Ok(WorkspaceManager { base_dir, model_type })
     }
 
+    /// Create a new WorkspaceManager with custom base directory
     pub fn with_base_dir<P: AsRef<Path>>(base_dir: P, model_type: ModelType) -> Result<Self> {
         let base_dir = base_dir.as_ref().to_path_buf();
         fs::create_dir_all(&base_dir)?;
         Ok(WorkspaceManager { base_dir, model_type })
     }
 
+    /// Get existing workspace or create new one with given name
     pub fn get_or_create_workspace(&self, workspace_name: &str) -> Result<MemorySystem> {
         let workspace_path = self.workspace_path(workspace_name);
         let db_path = workspace_path.join("memory.db");
@@ -45,7 +48,8 @@ impl WorkspaceManager {
             system.database().execute(|conn| {
                 conn.execute(
                     "INSERT INTO workspaces (name, path) VALUES (?1, ?2)",
-                    [workspace_name, workspace_path.to_str().unwrap()],
+                    [workspace_name, workspace_path.to_str()
+                        .ok_or_else(|| anyhow!("Invalid workspace path"))?],
                 )?;
                 Ok(())
             })?;

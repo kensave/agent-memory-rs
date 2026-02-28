@@ -30,7 +30,9 @@ impl MemorySystem {
 
     /// Load the embedding model. Only needed if created with `new_lazy()`.
     pub fn load_model(&self) -> Result<()> {
-        self.embedder.lock().unwrap().load_model_sync()
+        self.embedder.lock()
+            .map_err(|_| anyhow::anyhow!("Failed to acquire embedder lock"))?
+            .load_model_sync()
     }
 
     pub fn database(&self) -> &Database {
@@ -45,7 +47,9 @@ impl MemorySystem {
         let store = MemoryStore::new(self.db.clone());
         
         // Generate embedding
-        let embedding = self.embedder.lock().unwrap().embed(&memory.text)?;
+        let embedding = self.embedder.lock()
+            .map_err(|_| anyhow::anyhow!("Failed to acquire embedder lock"))?
+            .embed(&memory.text)?;
         
         // Store memory and embedding atomically
         let memory_id = store.insert_memory(memory)?;
@@ -60,7 +64,9 @@ impl MemorySystem {
         
         // Collect texts for batch embedding
         let texts: Vec<&str> = memories.iter().map(|m| m.text.as_str()).collect();
-        let embeddings = self.embedder.lock().unwrap().embed_batch(&texts)?;
+        let embeddings = self.embedder.lock()
+            .map_err(|_| anyhow::anyhow!("Failed to acquire embedder lock"))?
+            .embed_batch(&texts)?;
         
         // Store all memories and embeddings
         for (memory, embedding) in memories.iter().zip(embeddings.iter()) {
@@ -76,7 +82,9 @@ impl MemorySystem {
         let store = MemoryStore::new(self.db.clone());
         
         // Generate query embedding
-        let query_embedding = self.embedder.lock().unwrap().embed(query)?;
+        let query_embedding = self.embedder.lock()
+            .map_err(|_| anyhow::anyhow!("Failed to acquire embedder lock"))?
+            .embed(query)?;
         
         // Search with filters
         let results = store.search_similar(&query_embedding, filters, limit)?;

@@ -33,7 +33,8 @@ impl Database {
     where
         F: FnOnce(&Connection) -> Result<T>,
     {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock()
+            .map_err(|_| anyhow::anyhow!("Failed to acquire database connection lock"))?;
         f(&conn)
     }
 

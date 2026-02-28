@@ -126,7 +126,9 @@ impl HybridRetrievalEngine {
     fn search_episodes(&self, query: &str, workspace_id: i64, limit: usize) -> Result<Vec<HybridSearchResult>> {
         // Vector search if embedder available
         if let Some(ref embedder) = self.embedder {
-            let query_emb = embedder.lock().unwrap().embed(query)?;
+            let query_emb = embedder.lock()
+                .map_err(|_| anyhow::anyhow!("Failed to acquire embedder lock"))?
+                .embed(query)?;
             let embedding_blob: Vec<u8> = query_emb.iter()
                 .flat_map(|&f| f.to_le_bytes())
                 .collect();

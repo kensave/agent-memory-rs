@@ -2,42 +2,32 @@
 
 ## Codebase Overview
 
-**Size:** Large (367 files, 6,455 LOC)  
+**Size:** Large (300+ files, 6,000+ LOC)  
 **Language:** Rust  
-**Components:** 228 functions, 45 structs/classes  
-**Tests:** 44 integration tests
+**Components:** 200+ functions, 40+ structs/classes  
+**Tests:** 29 tests
 
 ### Key Modules
 
-- **Services** (11 files, ~1,600 LOC) - Core memory operations
+- **Services** (6 files, ~1,200 LOC) - Core memory operations
 - **Storage** (3 files, ~800 LOC) - Database and persistence
 - **MCP** (3 files, ~1,000 LOC) - Model Context Protocol server
-- **Traits** (6 files, ~110 LOC) - SOLID interfaces
+- **Traits** (5 files, ~110 LOC) - SOLID interfaces
 - **CLI** (2 files, ~125 LOC) - Command-line tools
 
 ## Architecture Overview
 
 ### Core Services (`src/services/`)
 
-**Memory Stores:**
-- `EpisodicMemoryStore` - Raw interaction events (220 LOC)
-- `ProceduralMemoryStore` - Learned workflows (163 LOC)
-- `SemanticMemoryStore` - Distilled knowledge (in `storage/memory_store.rs`)
-
-**Processing Engines:**
-- `ConsolidationEngine` - Pattern extraction and consolidation (179 LOC)
-- `HybridRetrievalEngine` - BM25 + vector search (198 LOC)
+**Memory Operations:**
+- `EpisodicMemoryStore` - Raw interaction events (250 LOC)
+- `HybridRetrievalEngine` - BM25 + vector search (253 LOC)
+- `ConsolidationEngine` - Pattern extraction and consolidation (169 LOC)
 - `PatternExtractor` - Recurring pattern detection (171 LOC)
-- `SynopsisGenerator` - Daily brief generation (158 LOC)
-- `DecayManager` - Intelligent archival (162 LOC)
-
-**Utilities:**
-- `CompositeScoreCalculator` - Memory scoring (93 LOC)
-- `ContextInjectionService` - Token budget management (84 LOC)
-- `HealthMonitor` - System metrics (84 LOC)
+- `SynopsisGenerator` - Daily brief generation (193 LOC)
 
 **Facade:**
-- `MemoryManager` - Unified API (156 LOC)
+- `MemoryManager` - Unified API (140 LOC)
 
 ### Storage Layer (`src/storage/`)
 

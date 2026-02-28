@@ -34,7 +34,9 @@ impl MemoryStore for EpisodicMemoryStore {
         
         // Generate embedding from context
         let embedding = if let Some(ref embedder) = self.embedder {
-            Some(embedder.lock().unwrap().embed(&context_json)?)
+            Some(embedder.lock()
+                .map_err(|_| anyhow::anyhow!("Failed to acquire embedder lock"))?
+                .embed(&context_json)?)
         } else {
             None
         };

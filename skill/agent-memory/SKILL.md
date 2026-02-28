@@ -1,6 +1,6 @@
 ---
 name: agent-memory
-description: Persistent memory system for AI agents with episodic, semantic, and procedural memory. Use when Claude needs to (1) Store information for future sessions (learn), (2) Recall previous conversations or decisions (search), (3) Build long-term context about users, projects, or patterns, (4) Remember preferences, workflows, or domain knowledge across conversations. Enables stateful agents that improve over time.
+description: Persistent memory system for AI agents with episodic and semantic memory. Use when Claude needs to (1) Store information for future sessions (learn), (2) Recall previous conversations or decisions (search), (3) Build long-term context about users, projects, or patterns, (4) Remember preferences, workflows, or domain knowledge across conversations. Enables stateful agents that improve over time.
 ---
 
 # Agent Memory
@@ -46,22 +46,19 @@ Persistent memory system enabling stateful AI agents through learn and search op
 
 ## Memory Types
 
-The system automatically organizes memories into three types:
+The system automatically organizes memories into two types:
 
 **Episodic** - Specific interaction events
 - Raw conversation context
 - Task outcomes and results
 - Temporal sequences
+- Stored as episodes with vector embeddings
 
 **Semantic** - Distilled knowledge
 - Facts and concepts
 - User preferences
 - Domain expertise
-
-**Procedural** - Learned workflows
-- Action sequences
-- Successful patterns
-- Reusable procedures
+- Created through consolidation (importance > 0.7) or pattern extraction
 
 ## Best Practices
 
