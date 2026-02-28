@@ -146,7 +146,18 @@ fn main() -> anyhow::Result<()> {
             let speaker = turn["speaker"].as_str().unwrap();
             let text = turn["text"].as_str().unwrap();
             
-            let memory_text = format!("[{}] {}: {}", dia_id, speaker, text);
+            // Add minimal timestamp at the END (just month/year)
+            let timestamp_suffix = if let Some(ref ts) = session_timestamp {
+                if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(ts) {
+                    format!(" ({})", dt.format("%b'%y"))  // May'23
+                } else {
+                    String::new()
+                }
+            } else {
+                String::new()
+            };
+            
+            let memory_text = format!("[{}] {}: {}{}", dia_id, speaker, text, timestamp_suffix);
             let tags = format!("locomo,{},session_{},{}", sample_id, session_num, dia_id);
             
             let memory = Memory {
