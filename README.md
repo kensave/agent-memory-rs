@@ -6,7 +6,7 @@
 
 **Episodic memory system for AI agents with vector search, exposed via MCP server.**
 
-> **Verified Performance:** 72.6% R@10 on LoCoMo benchmark (long-context memory retrieval)
+> **Verified Performance:** 65.1% R@10 on LoCoMo benchmark (long-context memory retrieval)
 
 > **Note:** This project was developed using [Kiro CLI](https://kiro.dev) - an AI-powered development assistant.
 
