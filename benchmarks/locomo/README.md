@@ -108,9 +108,23 @@ for i in {0..9}; do
 done
 ```
 
-## Results (conv-26)
+## Results
 
-Using BgeSmall model (384-dim embeddings):
+**Full Benchmark (10 conversations, 1,982 questions):**
+
+Using BgeSmall model (384-dim embeddings) with hybrid retrieval (BM25 + Vector):
+
+```
+Overall Average:
+  Recall@10: 65.1%
+  
+Best: conv-2 (74.1%)
+Worst: conv-3 (56.2%)
+
+Range: 56.2% - 74.1%
+```
+
+**Example: conv-26 (conversation 0):**
 
 ```
 Overall:
@@ -118,7 +132,7 @@ Overall:
   Recall@1:  0.284 (28.4%)
   Recall@3:  0.492 (49.2%)
   Recall@5:  0.599 (59.9%)
-  Recall@10: 0.680 (68.0%)  ⭐
+  Recall@10: 0.680 (68.0%)
   MRR:       0.416
 
 By Category:
@@ -129,6 +143,8 @@ By Category:
   Adversarial:  57.4% @ Recall@10 (weakest)
 ```
 
+See [BENCHMARK_RESULTS.md](results/BENCHMARK_RESULTS.md) for complete results.
+
 ## Comparison with Other Systems
 
 | System | Score | Notes |
@@ -136,16 +152,16 @@ By Category:
 | EverMemOS | 80.1% | SOTA, uses LLM |
 | Zep | 75.1% | Commercial tool |
 | Letta | 74.0% | GPT-4o-mini + filesystem |
-| **memory-rs** | **68.0%** | **Retrieval-only, $0 cost** |
 | Mem0 | 68.5% | Knowledge graph |
+| **memory-rs** | **65.1%** | **Hybrid retrieval (BM25 + Vector), $0 cost** |
 
 **Key difference:** Other systems use LLMs to generate answers. memory-rs only tests retrieval (finding context), making it harder to compare directly.
 
 ## Interpretation
 
-- **Recall@10 = 68%**: Memory system finds relevant context in top-10 results 68% of the time
-- **Strong at multi-hop reasoning (89%)**: Excellent at connecting related facts across conversation
-- **Weaker at adversarial questions (57%)**: Trick questions that require careful reasoning are harder
+- **Recall@10 = 65.1%**: Memory system finds relevant context in top-10 results 65% of the time (average across all conversations)
+- **Performance varies by conversation**: 56-74% range shows some conversations are easier than others
+- **Hybrid search works**: BM25 + Vector fusion improves over pure vector search
 - **Zero cost**: No LLM API calls, runs entirely locally
 
 ## Cleanup
