@@ -341,8 +341,8 @@ fn test_migration_to_v2() {
 
 ## Files Modified
 
-- `/Users/kenneth/workspace/memory-rs/src/storage/schema.rs` - Added migrate_to_v2()
-- `/Users/kenneth/workspace/memory-rs/tests/test_schema_migration.rs` - Integration test
+- `<project-root>/src/storage/schema.rs` - Added migrate_to_v2()
+- `<project-root>/tests/test_schema_migration.rs` - Integration test
 
 ---
 

@@ -124,7 +124,7 @@ Each workspace has its own isolated database. Memories are NOT shared between wo
 **Workspace Naming:**
 - Specified in MCP server args: `["workspace-name"]`
 - If no arg provided, auto-generates from current directory: `<hash>-<dirname>`
-  - Example: `/Users/kenneth/workspace/myproject` → `a1b2c3d4-myproject`
+  - Example: `/path/to/workspace/myproject` → `a1b2c3d4-myproject`
   - Hash ensures uniqueness across different paths with same directory name
 - Falls back to "default" if directory name unavailable
 

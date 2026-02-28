@@ -233,10 +233,10 @@ utility = (access_count × 0.4) + (success_rate × 0.4) + (feedback × 0.2)
 Memories are isolated per workspace by default:
 
 ```rust
-// Agent in /Users/kenneth/project-a
+// Agent in /path/to/project-a
 learn("User likes TypeScript") → stored in project-a/memory.db
 
-// Agent in /Users/kenneth/project-b  
+// Agent in /path/to/project-b  
 search("programming preferences") → searches only project-b/memory.db
 ```
 

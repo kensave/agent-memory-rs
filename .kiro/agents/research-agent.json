@@ -22,8 +22,11 @@
   ],
   "mcpServers": {
     "memory": {
-      "command": "./target/release/agent-memory-mcp",
-      "args": ["memory-rs"]
+      "command": "<project-root>/target/release/agent-memory-mcp",
+      "args": ["memory-rs-workspace"],
+      "env": {
+        "MEMORY_MODEL": "bge"
+      }
     }
   }
 }

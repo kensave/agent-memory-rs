@@ -26,3 +26,12 @@ Thumbs.db
 # Logs
 *.log
 benchmarks/locomo/target/
+
+# Memory workspace data
+.memory-rs/
+
+# Backup files
+*.backup
+
+# Benchmark artifacts
+benchmarks/**/locomo-conv-*

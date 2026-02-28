@@ -2,7 +2,7 @@
 
 **Date**: 2026-01-31  
 **Status**: Design Complete  
-**Location**: `/Users/kenneth/workspace/memory-rs/src/traits/`
+**Location**: `<project-root>/src/traits/`
 
 ---
 
@@ -388,10 +388,10 @@ where
 
 ## Files Created
 
-1. `/Users/kenneth/workspace/memory-rs/src/traits/mod.rs` - Module exports
-2. `/Users/kenneth/workspace/memory-rs/src/traits/memory_store.rs` - MemoryStore trait
-3. `/Users/kenneth/workspace/memory-rs/src/traits/retriever.rs` - MemoryRetriever trait
-4. `/Users/kenneth/workspace/memory-rs/src/traits/embedder.rs` - EmbeddingService trait
+1. `<project-root>/src/traits/mod.rs` - Module exports
+2. `<project-root>/src/traits/memory_store.rs` - MemoryStore trait
+3. `<project-root>/src/traits/retriever.rs` - MemoryRetriever trait
+4. `<project-root>/src/traits/embedder.rs` - EmbeddingService trait
 5. `/Users/kenneth/workspace/memory-rs/src/traits/consolidation.rs` - ConsolidationEngine trait
 6. `/Users/kenneth/workspace/memory-rs/src/models/mod.rs` - Models module
 7. `/Users/kenneth/workspace/memory-rs/src/models/dtos.rs` - DTOs

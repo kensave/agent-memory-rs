@@ -27,7 +27,7 @@ async def load_conversation_mcp(conv_data, workspace_name):
     
     # Connect to MCP server
     server_params = StdioServerParameters(
-        command="/Users/kenneth/workspace/memory-rs/target/release/agent-memory-mcp",
+        command="<project-root>/target/release/agent-memory-mcp",
         args=[workspace_name]
     )
     

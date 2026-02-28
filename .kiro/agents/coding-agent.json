@@ -1,6 +1,7 @@
 {
   "name": "coding-agent",
   "description": "Full-access coding agent for memory-rs workspace",
+  "model": "claude-opus-4.6",
   "tools": [
     "fs_read",
     "fs_write",
@@ -22,8 +23,11 @@
   ],
   "mcpServers": {
     "memory": {
-      "command": "./target/release/agent-memory-mcp",
-      "args": ["memory-rs"]
+      "command": "<project-root>/target/release/agent-memory-mcp",
+      "args": ["memory-rs-workspace"],
+      "env": {
+        "MEMORY_MODEL": "bge"
+      }
     }
   }
 }

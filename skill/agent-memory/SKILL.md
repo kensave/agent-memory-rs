@@ -69,7 +69,7 @@ The system automatically organizes memories into three types:
 
 **DO learn:**
 - User preferences ("prefers dark mode")
-- Project context ("working on CV site in /Users/kenneth/workspace/NewCV")
+- Project context ("working on CV site in /path/to/workspace/NewCV")
 - Decisions made ("chose Next.js 14 for performance")
 - Patterns discovered ("user typically works evenings PST")
 - Domain knowledge ("company uses PostgreSQL for production")

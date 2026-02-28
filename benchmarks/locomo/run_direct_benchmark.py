@@ -150,7 +150,7 @@ def main():
         "--extern", "chrono=target/release/deps/libchrono.rlib",
         str(bench_file),
         "-o", "/tmp/locomo_bench"
-    ], capture_output=True, text=True, cwd="/Users/kenneth/workspace/memory-rs")
+    ], capture_output=True, text=True, cwd="<project-root>")
     
     if result.returncode != 0:
         print(f"❌ Compilation failed:\n{result.stderr}")
