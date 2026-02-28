@@ -16,18 +16,6 @@ Total questions: 1,982
 
 ---
 
-## Results by Category
-
-| Category | Recall@10 | Notes |
-|----------|-----------|-------|
-| Multi-hop | 74.7% | ⭐ Best performance - excellent at connecting related facts |
-| Commonsense | 69.0% | Strong general reasoning |
-| Single-hop | 67.6% | Good at simple fact retrieval |
-| Adversarial | 48.3% | Weak - trick questions are challenging |
-| Temporal | 42.5% | ⚠️ Weakest - time-based reasoning needs improvement |
-
----
-
 ## Individual Conversation Results
 
 | Conversation | Sample ID | Turns | Questions | Recall@10 |
