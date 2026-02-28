@@ -4,7 +4,7 @@ use agent_memory_rs::models::dtos::Episode;
 use anyhow::Result;
 
 #[tokio::test]
-async fn test_full_pipeline_learn_consolidate_search() -> Result<()> {
+async fn test_full_pipeline_learn_search() -> Result<()> {
     let db = Database::new(":memory:")?;
     
     // Create workspace first
@@ -33,12 +33,7 @@ async fn test_full_pipeline_learn_consolidate_search() -> Result<()> {
     let episode_id = manager.store_episode(episode1).await?;
     assert!(episode_id > 0);
     
-    // Consolidate: Extract patterns
-    let date = chrono::Local::now().format("%Y-%m-%d").to_string();
-    let synopsis = manager.consolidate(date).await?;
-    assert!(!synopsis.summary.is_empty());
-    
-    // Search: Hierarchical retrieval (may be empty if consolidation didn't create semantic memories)
+    // Search: Hierarchical retrieval
     let _results = manager.retrieve_hierarchical("user preferences", workspace_id, 10)?;
     // Test passes if search completes without error - results may be empty initially
     

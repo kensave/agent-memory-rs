@@ -1,6 +1,6 @@
 ---
 name: agent-memory
-description: Persistent memory system for AI agents with episodic and semantic memory. Use when Claude needs to (1) Store information for future sessions (learn), (2) Recall previous conversations or decisions (search), (3) Build long-term context about users, projects, or patterns, (4) Remember preferences, workflows, or domain knowledge across conversations. Enables stateful agents that improve over time.
+description: Persistent episodic memory system for AI agents. Use when Claude needs to (1) Store information for future sessions (learn), (2) Recall previous conversations or decisions (search), (3) Build long-term context about users, projects, or patterns, (4) Remember preferences, workflows, or domain knowledge across conversations. Enables stateful agents that improve over time.
 ---
 
 # Agent Memory
@@ -46,19 +46,14 @@ Persistent memory system enabling stateful AI agents through learn and search op
 
 ## Memory Types
 
-The system automatically organizes memories into two types:
+The system stores memories as episodes:
 
-**Episodic** - Specific interaction events
+**Episodes** - Interaction events with context
 - Raw conversation context
 - Task outcomes and results
-- Temporal sequences
-- Stored as episodes with vector embeddings
-
-**Semantic** - Distilled knowledge
-- Facts and concepts
-- User preferences
-- Domain expertise
-- Created through consolidation (importance > 0.7) or pattern extraction
+- User preferences and decisions
+- Stored with vector embeddings for semantic search
+- Retrieved via hybrid search (BM25 + vector similarity)
 
 ## Best Practices
 
@@ -151,31 +146,29 @@ The memory system uses BGE-Small embeddings by default for optimal quality/speed
 
 ## Advanced Features
 
-### Auto-Consolidation
+### Workspace Isolation
 
-The system automatically:
-- Consolidates yesterday's memories on first use
-- Extracts patterns every 20 messages
-- Generates daily synopsis
-- Archives low-value memories
+Each workspace has isolated memory:
+- Separate SQLite databases per workspace
+- No cross-workspace memory sharing
+- Automatic workspace detection from current directory
+- Override with `MEMORY_WORKSPACE` environment variable
 
-### Hierarchical Retrieval
+### Search Algorithm
 
-Search automatically queries across:
-- Daily synopsis (recent summary)
-- Semantic memory (distilled knowledge)
-- Episodic memory (specific events)
-- Procedural memory (workflows)
-
-Results ranked by: `(similarity × 0.7) + (importance × 0.3)`
+Search uses hybrid approach:
+- BM25 keyword search for exact matches
+- Vector similarity for semantic matches
+- Cosine distance on BGE-Small embeddings (384 dims)
+- Results ranked by similarity score
 
 ### Memory Health
 
 The system tracks:
-- Active vs archived memories
-- Retrieval accuracy
-- Learning rate
-- Memory health ratio
+- Episode storage performance
+- Search accuracy and speed
+- Workspace memory usage
+- Vector index health
 
 ## Troubleshooting
 

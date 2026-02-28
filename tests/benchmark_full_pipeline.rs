@@ -114,19 +114,8 @@ async fn benchmark_full_pipeline_end_to_end() -> Result<()> {
     println!("  ⏱️  Average: {:?}", avg_hierarchical);
     println!("  📊 Rate: {:.1} searches/sec\n", 1.0 / avg_hierarchical.as_secs_f64());
     
-    // Benchmark 5: Consolidation
-    println!("🔄 Benchmark 5: Consolidation");
-    let date = chrono::Local::now().format("%Y-%m-%d").to_string();
-    let start = Instant::now();
-    let synopsis = manager.consolidate(date).await?;
-    let consolidation_time = start.elapsed();
-    
-    println!("  ✅ Consolidated {} episodes", 100);
-    println!("  ⏱️  Time: {:?}", consolidation_time);
-    println!("  📊 Synopsis: {} insights\n", synopsis.key_insights.len());
-    
-    // Benchmark 6: Memory Stats
-    println!("📊 Benchmark 6: Memory Stats");
+    // Benchmark 5: Memory Stats
+    println!("📊 Benchmark 5: Memory Stats");
     let start = Instant::now();
     let stats = manager.get_memory_stats(workspace_id)?;
     let stats_time = start.elapsed();
@@ -144,14 +133,12 @@ async fn benchmark_full_pipeline_end_to_end() -> Result<()> {
     println!("Semantic Storage:       {:?} ({:.1}/sec)", avg_semantic, 1.0 / avg_semantic.as_secs_f64());
     println!("BM25 Search:            {:?} ({:.1}/sec)", avg_bm25, 1.0 / avg_bm25.as_secs_f64());
     println!("Hierarchical Retrieval: {:?} ({:.1}/sec)", avg_hierarchical, 1.0 / avg_hierarchical.as_secs_f64());
-    println!("Consolidation:          {:?}", consolidation_time);
     println!("Memory Stats:           {:?}", stats_time);
     println!("═══════════════════════════════════════════\n");
     
     // Assertions
     assert!(avg_episode.as_millis() < 100, "Episode storage should be < 100ms");
     assert!(avg_hierarchical.as_millis() < 10, "Hierarchical search should be < 10ms");
-    assert!(consolidation_time.as_secs() < 10, "Consolidation should be < 10s");
     
     println!("✅ All benchmarks passed!\n");
     

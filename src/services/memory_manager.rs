@@ -1,11 +1,9 @@
 use crate::embedder::FastEmbedder;
-use crate::models::dtos::{Episode, Synopsis};
-use crate::services::consolidation_engine::ConsolidationEngine;
+use crate::models::dtos::Episode;
 use crate::services::episodic_store::EpisodicMemoryStore;
 use crate::services::hybrid_retrieval::{HybridRetrievalEngine, HybridSearchResult};
 use crate::storage::database::Database;
 use crate::storage::memory_store::{Memory, MemoryStore as SemanticStore};
-use crate::traits::consolidation::ConsolidationEngine as ConsolidationTrait;
 use crate::traits::memory_store::MemoryStore;
 use anyhow::Result;
 use std::sync::{Arc, Mutex};
@@ -15,7 +13,6 @@ pub struct MemoryManager {
     episodic: EpisodicMemoryStore,
     semantic: SemanticStore,
     retrieval: HybridRetrievalEngine,
-    consolidation: ConsolidationEngine,
 }
 
 impl MemoryManager {
@@ -25,7 +22,6 @@ impl MemoryManager {
             episodic: EpisodicMemoryStore::new(db.clone()),
             semantic: SemanticStore::new(db.clone()),
             retrieval: HybridRetrievalEngine::new(db.clone()),
-            consolidation: ConsolidationEngine::new(db.clone()),
             db,
         }
     }
@@ -36,7 +32,6 @@ impl MemoryManager {
             episodic: EpisodicMemoryStore::with_embedder(db.clone(), embedder.clone()),
             semantic: SemanticStore::new(db.clone()),
             retrieval: HybridRetrievalEngine::with_embedder(db.clone(), embedder),
-            consolidation: ConsolidationEngine::new(db.clone()),
             db,
         }
     }
@@ -68,41 +63,6 @@ impl MemoryManager {
         results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
         results.truncate(max_results);
         Ok(results)
-    }
-
-    pub fn get_synopsis(&self, workspace_id: i64, date: &str) -> Result<Option<Synopsis>> {
-        self.db.execute(|conn| {
-            let result = conn.query_row(
-                "SELECT date, workspace_id, agent_id, summary, key_insights,
-                        new_knowledge_ids, new_procedure_ids, stats, created_at
-                 FROM daily_synopsis
-                 WHERE workspace_id = ? AND date = ?",
-                rusqlite::params![workspace_id, date],
-                |row| {
-                    Ok(Synopsis {
-                        date: row.get(0)?,
-                        workspace_id: row.get(1)?,
-                        agent_id: row.get(2)?,
-                        summary: row.get(3)?,
-                        key_insights: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
-                        new_knowledge_ids: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
-                        new_procedure_ids: serde_json::from_str(&row.get::<_, String>(6)?).unwrap_or_default(),
-                        stats: serde_json::from_str(&row.get::<_, String>(7)?).unwrap_or_default(),
-                        created_at: row.get(8)?,
-                    })
-                }
-            );
-            
-            match result {
-                Ok(synopsis) => Ok(Some(synopsis)),
-                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-                Err(e) => Err(e.into()),
-            }
-        })
-    }
-
-    pub async fn consolidate(&self, date: String) -> Result<Synopsis> {
-        self.consolidation.consolidate_daily(date).await
     }
 
     pub fn get_memory_stats(&self, workspace_id: i64) -> Result<MemoryStats> {

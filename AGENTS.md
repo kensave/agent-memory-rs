@@ -22,9 +22,6 @@
 **Memory Operations:**
 - `EpisodicMemoryStore` - Raw interaction events (250 LOC)
 - `HybridRetrievalEngine` - BM25 + vector search (253 LOC)
-- `ConsolidationEngine` - Pattern extraction and consolidation (169 LOC)
-- `PatternExtractor` - Recurring pattern detection (171 LOC)
-- `SynopsisGenerator` - Daily brief generation (193 LOC)
 
 **Facade:**
 - `MemoryManager` - Unified API (140 LOC)
@@ -78,37 +75,23 @@ SOLID interface definitions:
 
 ## Overview
 
-Memory-RS provides a comprehensive memory management system for AI agents with three memory types: episodic (raw events), semantic (distilled knowledge), and procedural (learned workflows). Memories are workspace-scoped with automatic consolidation and intelligent decay.
+Memory-RS provides episodic memory management for AI agents. Episodes are stored with vector embeddings and retrieved using hybrid search (BM25 + vector similarity). Memories are workspace-scoped for project isolation.
 
 ## Memory Types
 
-### 1. Episodic Memory
+### Episodic Memory
 Raw interaction events with full context:
 - Event type, timestamp, conversation ID
 - Outcome and valence (emotional value)
 - Full context as JSON
-- Archival support (active → archived)
-
-### 2. Semantic Memory
-Distilled knowledge with confidence tracking:
-- Source episode tracking
-- Confidence scores (updated with reinforcement)
-- Access count and validation timestamps
-- Tags and importance scores
-
-### 3. Procedural Memory
-Learned workflows and patterns:
-- Trigger conditions
-- Action sequences
-- Success rate tracking
-- Usage count and last used timestamp
+- Vector embeddings for semantic search
 
 ## End-to-End Flow
 
 ### 1. Workspace Initialization
 
 ```
-Agent starts → MCP Server initializes → Consolidates yesterday's memories → Ready
+Agent starts → MCP Server initializes → Ready
 ```
 
 **Storage Location:**
@@ -119,10 +102,10 @@ Agent starts → MCP Server initializes → Consolidates yesterday's memories �
   └── default.db             # Default workspace
 ```
 
-### 2. Learning Flow (Episodic Storage)
+### 2. Learning Flow (Episode Storage)
 
 ```
-Agent learns → Episode created → Stored in episodic memory → Message counter increments
+Agent learns → Episode created → Stored in episodic memory
 ```
 
 **Example:**
@@ -140,23 +123,10 @@ Agent learns → Episode created → Stored in episodic memory → Message count
 }
 ```
 
-### 3. Consolidation Flow (Automatic)
+### 3. Retrieval Flow (Hybrid Search)
 
 ```
-Every 20 messages → Consolidate triggered → Extract patterns → Update semantic/procedural → Generate synopsis
-```
-
-**What happens:**
-1. PatternExtractor analyzes episodes
-2. Recurring patterns → Semantic memory (confidence > 0.6)
-3. Successful workflows → Procedural memory (frequency >= 2)
-4. DailySynopsisGenerator creates summary
-5. Episodes marked for archival
-
-### 4. Retrieval Flow (Hierarchical)
-
-```
-Agent queries → Hybrid search (BM25 + Vector) → Hierarchical retrieval → Ranked results
+Agent queries → Hybrid search (BM25 + Vector) → Ranked results
 ```
 
 **Example:**
@@ -175,46 +145,16 @@ Agent queries → Hybrid search (BM25 + Vector) → Hierarchical retrieval → R
 
 **What happens:**
 1. Query → BM25 keyword search + Vector similarity
-2. Hierarchical retrieval:
-   - Semantic memory (50% of results)
-   - Recent episodes (25% of results)
-   - Procedures (25% of results)
-3. RRF fusion and composite scoring
-4. Return top N results
-
-### 5. Decay Flow (Weekly)
-
-```
-Every 7 days → Calculate composite scores → Archive low-scoring → Prune redundant
-```
-
-**Composite Score Formula:**
-```
-score = (recency × 0.3) + (relevance × 0.4) + (utility × 0.3)
-
-recency = exp(-0.1 × days_since_access)
-relevance = cosine_similarity(embedding, query)
-utility = (access_count × 0.4) + (success_rate × 0.4) + (feedback × 0.2)
-```
+2. Cosine distance retrieval on episode embeddings
+3. Return top N results
 
 ## Memory Lifecycle
 
-### Week 1: Accumulation
+### Continuous Operation
 - Episodes stored as events occur
-- Message counter tracks activity
-- Auto-consolidation every 20 messages
-
-### Week 2-4: Consolidation
-- Patterns extracted nightly
-- Semantic memory grows
-- Procedures refined with success rates
-- Daily synopses accumulate
-
-### Month 2+: Optimization
-- Low-scoring episodes archived
-- High-confidence knowledge retained
-- Proven workflows (80%+ success) prioritized
-- Context stays relevant
+- Vector embeddings generated for semantic search
+- Hybrid search (BM25 + vector) for retrieval
+- Workspace isolation maintains context boundaries
 
 ## Memory Scoping
 

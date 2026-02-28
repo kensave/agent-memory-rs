@@ -13,8 +13,6 @@ async fn main() -> Result<()> {
         println!("  workspace list");
         println!("  workspace delete --id ID");
         println!("  store --workspace ID --type TYPE --context TEXT [--outcome TEXT] [--valence FLOAT]");
-        println!("  consolidate --date YYYY-MM-DD");
-        println!("  synopsis --workspace ID --date YYYY-MM-DD");
         println!("  stats --workspace ID");
         println!("  query --workspace ID <text> [--limit N]");
         return Ok(());
@@ -66,22 +64,6 @@ async fn main() -> Result<()> {
                 .and_then(|i| args.get(i + 1))
                 .and_then(|s| s.parse().ok());
             cli.store_episode(workspace_id, event_type, context, outcome, valence).await?;
-        }
-        "consolidate" => {
-            let date = args.iter().position(|a| a == "--date")
-                .and_then(|i| args.get(i + 1))
-                .expect("--date required").to_string();
-            cli.consolidate(date).await?;
-        }
-        "synopsis" => {
-            let workspace_id = args.iter().position(|a| a == "--workspace")
-                .and_then(|i| args.get(i + 1))
-                .and_then(|s| s.parse().ok())
-                .expect("--workspace required");
-            let date = args.iter().position(|a| a == "--date")
-                .and_then(|i| args.get(i + 1))
-                .expect("--date required");
-            cli.synopsis(workspace_id, date)?;
         }
         "stats" => {
             let workspace_id = args.iter().position(|a| a == "--workspace")

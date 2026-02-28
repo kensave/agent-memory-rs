@@ -1,6 +1,6 @@
 # Agent Memory RS
 
-**Production-ready episodic memory system for AI agents with auto-consolidation and hierarchical retrieval.**
+**Episodic memory system for AI agents with vector search, exposed via MCP server.**
 
 > **Verified Performance:** 72.6% R@10 on LoCoMo benchmark (long-context memory retrieval)
 
@@ -9,47 +9,39 @@
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
 
-A comprehensive memory management system for LLM agents implementing cognitive architectures based on modern AI research (2024-2026) and cognitive science foundations.
+## Overview
 
-## 🧠 Overview
+Agent Memory RS stores interaction episodes with vector embeddings and retrieves them using cosine similarity search. Exposed as an MCP server with `learn` and `search` tools.
 
-Agent Memory RS provides two types of memory for AI agents:
+### Features
 
-- **Episodic Memory** - Store interaction events with full context, timestamps, and emotional valence
-- **Semantic Memory** - Extract and consolidate knowledge with confidence tracking
+- **Episode Storage** — Events stored with vector embeddings (BGE-Small, 384 dims)
+- **Vector Search** — Cosine distance retrieval on episode embeddings
+- **BM25 Search** — Keyword search with proper IDF calculation
+- **MCP Server** — Learn and search tools via Model Context Protocol (stdio)
+- **Workspace Isolation** — Separate SQLite databases per workspace (`~/.memory-rs/workspaces/`)
+- **Multiple Models** — BGE-Small (default), Nomic (long context), MiniLM (fastest)
 
-### Key Features
-
-✅ **Episode Embeddings** - Episodes stored with vector embeddings for semantic search  
-✅ **Real BM25 Search** - Proper IDF calculation with k1=1.2, b=0.75 parameters  
-✅ **Hybrid Search** - BM25 + vector search with RRF fusion for semantic memories  
-✅ **Hierarchical Retrieval** - Multi-level search: semantic (hybrid) + episodes (vector) + procedures (BM25)  
-✅ **Auto-Consolidation** - Background consolidation every 20 messages (configurable)  
-✅ **Pattern Extraction** - Identifies recurring themes and successful workflows  
-✅ **Daily Synopsis** - Automatic daily summaries with key insights  
-✅ **MCP Server** - Full pipeline integration with learn/search tools  
-✅ **Production Ready** - 38 passing tests, SOLID architecture, thread-safe  
-
-### Implementation Status
-
-**Fully Working:**
-- ✅ Episode storage with vector embeddings
-- ✅ Real BM25 algorithm with proper IDF
-- ✅ Hybrid BM25+vector search for semantic memories
-- ✅ Vector-only search for episodes
-- ✅ Hierarchical retrieval across all memory types
-- ✅ Auto-consolidation (startup + every 20 messages)
-- ✅ Pattern extraction creating semantic memories
-- ✅ Daily synopsis generation with stats
-
-**CLI-Only Features:**
-- ⚠️ Manual decay/pruning (`prune` command)
-- ⚠️ Synopsis retrieval by date (`synopsis` command)
-- ⚠️ Memory statistics (`stats` command)
-
-**Not Yet Implemented:**
-- ❌ Automatic decay/archival (must use CLI)
-- ❌ Synopsis embeddings (not searchable)  
+```
+┌─────────────────────────┐
+│       MCP Client        │
+└───────────┬─────────────┘
+            │ stdio (JSON-RPC)
+┌───────────▼─────────────┐
+│      MCP Server         │
+│  ┌─────────┐ ┌────────┐ │
+│  │  learn  │ │ search │ │
+│  └────┬────┘ └───┬────┘ │
+└───────┼──────────┼──────┘
+┌───────▼──────────▼──────┐
+│   EpisodicMemoryStore   │
+│  ┌──────────────────┐   │
+│  │ SQLite + vec0     │   │
+│  │ (episodes table)  │   │
+│  │ (vector index)    │   │
+│  └──────────────────┘   │
+└─────────────────────────┘
+```
 
 ## 🚀 Quick Start
 
@@ -62,8 +54,6 @@ cargo build --release
 ```
 
 ### MCP Server (Recommended)
-
-The MCP server automatically consolidates memories on startup and every 20 messages:
 
 ```bash
 # Start the server
@@ -154,12 +144,6 @@ cargo run --bin agent-memory-cli store --workspace 1 --type user_query --context
 # Query memories
 cargo run --bin agent-memory-cli query --workspace 1 "rust programming" --limit 10
 
-# View daily synopsis
-cargo run --bin agent-memory-cli synopsis --workspace 1 --date 2026-01-31
-
-# Manual consolidation
-cargo run --bin agent-memory-cli consolidate --date 2026-01-31
-
 # Check system health
 cargo run --bin agent-memory-cli stats --workspace 1
 ```
@@ -185,19 +169,12 @@ manager.store_episode(
 
 // Search memories
 let results = manager.retrieve("rust programming", 1, 10)?;
-
-// Get daily synopsis
-let synopsis = manager.get_synopsis(1, "2026-01-31")?;
-
-// Consolidate
-manager.consolidate(1, "2026-01-31")?;
 ```
 
 ## 📚 Documentation
 
 - **[Getting Started Guide](docs/README.md)** - Complete API reference and examples
 - **[Design Rationale](docs/DESIGN_RATIONALE.md)** - Design decisions, formulas, algorithms, and research
-- **[MCP Server Guide](docs/MCP_AUTO_CONSOLIDATION.md)** - How auto-consolidation works
 
 ## 🎓 Agent Skill
 
@@ -228,14 +205,11 @@ The skill is loaded on-demand, providing guidance only when needed without consu
 ```
 MemoryManager (Facade)
     ├── EpisodicMemoryStore      - Raw interaction events
-    ├── HybridRetrievalEngine    - BM25 + Vector search
-    ├── ConsolidationEngine      - Pattern extraction
-    ├── PatternExtractor         - Identifies recurring themes
-    └── SynopsisGenerator        - Daily summaries
+    └── HybridRetrievalEngine    - BM25 + Vector search
 ```
 
 **Built with SOLID principles:**
-- 5 core traits (MemoryStore, MemoryRetriever, ConsolidationEngine, EmbeddingService, PatternExtractor)
+- Core traits (MemoryStore, MemoryRetriever, EmbeddingService)
 - Dependency injection throughout
 - Thread-safe Database pattern: `Arc<Mutex<Connection>>`
 
@@ -258,8 +232,6 @@ cargo test -- --nocapture
 
 - **Episode Storage:** ~5ms
 - **Hybrid Search:** ~20ms (10k memories)
-- **Daily Consolidation:** ~2s
-- **Synopsis Generation:** ~500ms
 
 ## 🔬 Research Foundation
 
@@ -351,8 +323,6 @@ cargo build --bin memory-rs-mcp --release
 
 - **Episode storage**: ~5ms
 - **Hybrid search**: ~20ms (1000 memories)
-- **Consolidation**: ~2s (100 episodes)
-- **Synopsis generation**: ~500ms
 - **All operations**: Non-blocking
 
 ## 🤝 Contributing

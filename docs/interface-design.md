@@ -19,7 +19,6 @@ Each trait has ONE reason to change:
 - `MemoryStore` - only storage operations (CRUD)
 - `MemoryRetriever` - only retrieval/search operations
 - `EmbeddingService` - only embedding generation
-- `ConsolidationEngine` - only consolidation orchestration
 
 ### 2. Open/Closed Principle (OCP)
 - Traits are open for extension (new implementations)
@@ -38,7 +37,7 @@ Each trait has ONE reason to change:
 
 ### 5. Dependency Inversion Principle (DIP)
 - High-level modules depend on abstractions (traits), not concrete types
-- Example: `ConsolidationEngine` depends on `MemoryStore` trait, not specific implementation
+- Example: `MemoryManager` depends on `MemoryStore` trait, not specific implementation
 - Enables dependency injection and testing
 
 ---

@@ -2,12 +2,11 @@
 
 ## Overview
 
-A comprehensive memory management system for AI agents with episodic, semantic, and procedural memory types, intelligent consolidation, and decay mechanisms.
+Episodic memory system for AI agents with vector search, exposed via MCP server.
 
 ## Documentation
 
 - **[Design Rationale](DESIGN_RATIONALE.md)** - Design decisions, formulas, algorithms, and research
-- **[MCP Auto-Consolidation](MCP_AUTO_CONSOLIDATION.md)** - How auto-consolidation works
 - **[Interface Design](interface-design.md)** - SOLID principles and trait design
 - **[Schema](schema-extensions-v2.md)** - Database schema and migrations
 
@@ -18,10 +17,7 @@ A comprehensive memory management system for AI agents with episodic, semantic, 
 ```
 MemoryManager (Facade)
     ├── EpisodicMemoryStore      - Raw interaction events
-    ├── HybridRetrievalEngine    - BM25 + Vector search
-    ├── ConsolidationEngine      - Pattern extraction
-    ├── PatternExtractor         - Identifies recurring themes
-    └── SynopsisGenerator        - Daily summaries
+    └── HybridRetrievalEngine    - BM25 + Vector search
 ```
 
 ### Memory Types
@@ -30,11 +26,6 @@ MemoryManager (Facade)
    - Event type, timestamp, conversation ID
    - Outcome, valence (emotional value)
    - Vector embeddings for semantic search
-
-2. **Consolidated Memories**: Extracted patterns and themes
-   - Created through consolidation process
-   - Pattern extraction from episodes
-   - Daily synopsis generation
 
 ## Quick Start
 
@@ -61,9 +52,6 @@ manager.store_episode(episode).await?;
 
 // Retrieve memories
 let results = manager.retrieve("task", workspace_id, 10)?;
-
-// Consolidate daily
-let synopsis = manager.consolidate("2026-01-31".to_string()).await?;
 ```
 
 ### CLI Commands
@@ -78,53 +66,34 @@ memory-cli stats --workspace 1
 # Query memories
 memory-cli query "rust programming" --limit 10
 
-# View daily synopsis
-memory-cli synopsis --date 2026-01-31
-
-# Consolidate memories
-memory-cli consolidate --date 2026-01-31
-
 # Prune old memories
 memory-cli prune --dry-run
 ```
 
 ## Key Features
 
-### 1. Hierarchical Retrieval
+### 1. Episode Storage
 
-Retrieves memories in priority order:
-- Semantic memory (50% of results)
-- Recent episodes (25%)
-- Procedures (25%)
-
-```rust
-let results = manager.retrieve_hierarchical(query, workspace_id, 10)?;
-```
-
-### 2. Daily Consolidation
-
-Automatically extracts patterns and generates synopsis:
+Store interaction events with full context:
+- Event type, timestamp, conversation ID
+- Outcome, valence (emotional value)
+- Vector embeddings for semantic search
 
 ```rust
-let synopsis = manager.consolidate(date).await?;
-// Returns: summary, key insights, new knowledge, new procedures
+let episode = Episode::new("user_query", context, Some("outcome"), Some(0.8));
+manager.store_episode(episode).await?;
 ```
 
-### 3. Intelligent Decay
-
-Composite scoring formula:
-```
-score = (recency × 0.3) + (relevance × 0.4) + (utility × 0.3)
-```
-
-Archives low-scoring memories automatically.
-
-### 4. Hybrid Search
+### 2. Hybrid Search
 
 Combines BM25 keyword search with vector similarity:
-- RRF (Reciprocal Rank Fusion) for result merging
-- Type-specific search strategies
+- Cosine distance retrieval on episode embeddings
+- BM25 search with proper IDF calculation
 - Configurable result limits
+
+```rust
+let results = manager.retrieve("rust programming", workspace_id, 10)?;
+```
 
 ## Database Schema
 
@@ -132,17 +101,11 @@ Combines BM25 keyword search with vector similarity:
 
 - `workspaces` - Project isolation
 - `agents` - Multi-agent support
-- `memories` - Semantic knowledge
 - `episodes` - Episodic events
-- `procedures` - Learned workflows
-- `daily_synopsis` - Consolidated summaries
 
 ### Vector Tables
 
-- `vec0` - Memory embeddings (384 dims)
-- `vec_episodes` - Episode embeddings
-- `vec_procedures` - Procedure embeddings
-- `vec_synopsis` - Synopsis embeddings
+- `vec0` - Episode embeddings (384 dims)
 
 ## API Reference
 
@@ -150,33 +113,12 @@ Combines BM25 keyword search with vector similarity:
 
 **Storage**:
 - `store_episode(episode)` → `i64`
-- `store_procedure(procedure)` → `i64`
-- `store_knowledge(memory)` → `i64`
 
 **Retrieval**:
 - `retrieve(query, workspace_id, limit)` → `Vec<HybridSearchResult>`
-- `retrieve_hierarchical(query, workspace_id, max)` → `Vec<HybridSearchResult>`
-- `get_synopsis(workspace_id, date)` → `Option<Synopsis>`
 
 **Management**:
-- `consolidate(date)` → `Synopsis`
-- `prune(workspace_id, dry_run)` → `(usize, usize, usize)`
 - `get_memory_stats(workspace_id)` → `MemoryStats`
-
-### ContextInjectionService
-
-Prepares memory context for LLM consumption:
-
-```rust
-let service = ContextInjectionService::new(manager);
-let context = service.prepare_context(query, workspace_id, token_budget)?;
-```
-
-Budget allocation:
-- Synopsis: 25%
-- Semantic: 40%
-- Episodic: 25%
-- Procedural: 10%
 
 ## Performance
 
@@ -184,15 +126,12 @@ Budget allocation:
 
 - Episode storage: ~5ms
 - Hybrid search: ~20ms (1000 memories)
-- Consolidation: ~2s (100 episodes)
-- Synopsis generation: ~500ms
 
 ### Optimization Tips
 
 1. **Batch Operations**: Use batch methods for bulk inserts
 2. **Index Usage**: Ensure indexes on timestamp, workspace_id
-3. **Archival**: Run consolidation nightly to keep active set small
-4. **Token Budget**: Adjust context budget based on LLM limits
+3. **Token Budget**: Adjust context budget based on LLM limits
 
 ## Testing
 
@@ -205,8 +144,6 @@ cargo test --quiet
 ### Integration Tests
 
 - `test_episodic_store` - Episode CRUD
-- `test_semantic_extensions` - Knowledge tracking
-- `test_consolidation_engine` - Full pipeline
 - `test_hybrid_retrieval` - BM25 + vector search
 - `test_full_pipeline` - End-to-end workflow
 
@@ -217,8 +154,7 @@ Total: 29 tests
 ### Single Responsibility
 Each service has one clear purpose:
 - `EpisodicMemoryStore` - Episode storage only
-- `PatternExtractor` - Pattern analysis only
-- `ConsolidationEngine` - Consolidation only
+- `HybridRetrievalEngine` - Search only
 
 ### Open/Closed
 Extend via traits without modifying existing code:
@@ -232,7 +168,6 @@ All stores implement `MemoryStore` trait interchangeably.
 ### Interface Segregation
 Clients depend only on methods they use:
 - `MemoryStore` - CRUD operations
-- `ConsolidationEngine` - Consolidation only
 - `MemoryRetriever` - Search only
 
 ### Dependency Inversion
@@ -253,10 +188,7 @@ let results = system.search(query, workspace_id, limit)?;
 ```rust
 let manager = MemoryManager::new(db);
 
-// Store as semantic memory
-manager.store_knowledge(&memory)?;
-
-// Or store as episode
+// Store as episode
 manager.store_episode(episode).await?;
 
 // Retrieve with hybrid search
@@ -265,20 +197,17 @@ let results = manager.retrieve(query, workspace_id, limit)?;
 
 ### Backward Compatibility
 
-The old `memories` table is now semantic memory. Existing data works without migration.
+The system maintains compatibility with existing episode data.
 
 ## Troubleshooting
 
 ### Common Issues
 
 **Issue**: Old tests failing after schema changes
-**Solution**: Update tests to use new Memory struct fields (source_episodes, confidence, last_validated)
+**Solution**: Update tests to use new Episode struct fields
 
-**Issue**: Consolidation taking too long
-**Solution**: Reduce episode count via more aggressive archival thresholds
-
-**Issue**: Low health score
-**Solution**: Run consolidation to extract patterns and increase confidence scores
+**Issue**: Search performance degrading
+**Solution**: Ensure proper indexing on timestamp and workspace_id fields
 
 ## Contributing
 

@@ -19,8 +19,6 @@ pub struct MemoryMcpServer {
     memory_system: Arc<Mutex<MemorySystem>>,
     memory_manager: Arc<MemoryManager>,
     workspace_id: i64,
-    message_count: Arc<Mutex<usize>>,
-    consolidation_threshold: usize,
     initialized: Arc<Mutex<bool>>,
 }
 
@@ -48,36 +46,8 @@ impl MemoryMcpServer {
             memory_system: Arc::new(Mutex::new(memory_system)),
             memory_manager,
             workspace_id,
-            message_count: Arc::new(Mutex::new(0)),
-            consolidation_threshold: 20, // Default: every 20 messages
             initialized: Arc::new(Mutex::new(false)),
         })
-    }
-    
-    /// Initialize server - consolidates yesterday's memories
-    pub async fn initialize(&self) -> Result<()> {
-        println!("🚀 Memory MCP Server initializing...");
-        
-        // Consolidate yesterday in background
-        let yesterday = (chrono::Local::now() - chrono::Duration::days(1))
-            .format("%Y-%m-%d").to_string();
-        
-        let manager = Arc::clone(&self.memory_manager);
-        tokio::spawn(async move {
-            println!("🔄 Consolidating memories from {}...", yesterday);
-            match manager.consolidate(yesterday).await {
-                Ok(synopsis) => {
-                    println!("✅ Consolidation complete: {} insights extracted", 
-                             synopsis.key_insights.len());
-                }
-                Err(e) => {
-                    eprintln!("⚠️  Consolidation failed (non-fatal): {}", e);
-                }
-            }
-        });
-        
-        println!("✅ Memory MCP Server ready");
-        Ok(())
     }
     
     /// Ensure model is loaded on first use
@@ -126,28 +96,6 @@ impl MemoryMcpServer {
             
             drop(system);
             tracing::info!("Model loaded successfully");
-            
-            if let Some(ref mut f) = log {
-                let _ = writeln!(f, "[{}] Starting background consolidation...", chrono::Local::now().format("%H:%M:%S%.3f"));
-            }
-            
-            // Run initial consolidation in background
-            tracing::info!("Running initial consolidation for yesterday");
-            let yesterday = (chrono::Local::now() - chrono::Duration::days(1))
-                .format("%Y-%m-%d").to_string();
-            
-            let manager = Arc::clone(&self.memory_manager);
-            tokio::spawn(async move {
-                match manager.consolidate(yesterday).await {
-                    Ok(synopsis) => {
-                        tracing::info!("Initial consolidation complete: {} insights", 
-                                     synopsis.key_insights.len());
-                    }
-                    Err(e) => {
-                        tracing::warn!("Initial consolidation failed: {}", e);
-                    }
-                }
-            });
         }
         
         if let Some(ref mut f) = log {
@@ -155,33 +103,6 @@ impl MemoryMcpServer {
         }
         
         Ok(())
-    }
-    
-    /// Check if consolidation needed after message
-    async fn check_consolidation(&self) {
-        let mut count = self.message_count.lock().await;
-        *count += 1;
-        
-        if *count >= self.consolidation_threshold {
-            *count = 0;
-            drop(count);
-            
-            tracing::info!("Threshold reached, running consolidation");
-            let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-            
-            let manager = Arc::clone(&self.memory_manager);
-            tokio::spawn(async move {
-                match manager.consolidate(today).await {
-                    Ok(synopsis) => {
-                        tracing::info!("Consolidation complete: {} insights", 
-                                     synopsis.key_insights.len());
-                    }
-                    Err(e) => {
-                        tracing::warn!("Consolidation failed: {}", e);
-                    }
-                }
-            });
-        }
     }
 }
 
@@ -406,9 +327,6 @@ impl ServerHandler for MemoryMcpServer {
                 
                 // Drop lock before async operation
                 drop(system);
-                
-                // Check if consolidation needed
-                self.check_consolidation().await;
 
                 Ok(CallToolResult::success(vec![Content::text(json!({
                     "episode_id": episode_id,
@@ -437,9 +355,6 @@ impl ServerHandler for MemoryMcpServer {
                         None,
                     ))?;
                 
-                // Check if consolidation needed
-                self.check_consolidation().await;
-
                 Ok(CallToolResult::success(vec![Content::text(json!({
                     "results": results,
                     "count": results.len()

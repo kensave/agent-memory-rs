@@ -75,37 +75,6 @@ impl MemoryCLI {
         Ok(())
     }
 
-    pub async fn consolidate(&self, date: String) -> Result<()> {
-        println!("🔄 Consolidating memories for {}...", date);
-        let synopsis = self.manager.consolidate(date).await?;
-        println!("✅ Consolidation complete!");
-        println!("   Summary: {}", synopsis.summary);
-        println!("   Insights: {}", synopsis.key_insights.len());
-        println!("   New knowledge: {}", synopsis.new_knowledge_ids.len());
-        println!("   New procedures: {}", synopsis.new_procedure_ids.len());
-        Ok(())
-    }
-
-    pub fn synopsis(&self, workspace_id: i64, date: &str) -> Result<()> {
-        println!("📋 Daily Synopsis for {}", date);
-        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        
-        match self.manager.get_synopsis(workspace_id, date)? {
-            Some(synopsis) => {
-                println!("\n{}", synopsis.summary);
-                println!("\n🔑 Key Insights:");
-                for (i, insight) in synopsis.key_insights.iter().enumerate() {
-                    println!("  {}. {}", i + 1, insight);
-                }
-                println!("\n📊 Stats: {}", synopsis.stats);
-            }
-            None => {
-                println!("No synopsis found for this date.");
-            }
-        }
-        Ok(())
-    }
-
     pub fn stats(&self, workspace_id: i64) -> Result<()> {
         println!("📊 Memory Statistics");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
