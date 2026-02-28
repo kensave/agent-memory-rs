@@ -2,17 +2,19 @@
 
 **Date:** 2026-02-28  
 **Model:** BgeSmall (384-dimensional embeddings)  
-**Method:** Vector Search with Temporal Weighting  
+**Method:** Vector Search with Temporal Context in Text  
 **Dataset:** Full LoCoMo benchmark (10 conversations, 1,982 questions)
 
 ---
 
 ## Overall Results
 
-**Average Recall@10: 65.1%**
+**Average Recall@10: 63.4%**
 
 Conversations tested: 10/10  
 Total questions: 1,982
+
+**Note:** Adding timestamps to embedded text improved some conversations (conv-0: 68.0%→72.6%) but hurt others (conv-8: 61.7%→53.1%). Overall slight decrease from 65.1% baseline.
 
 ---
 

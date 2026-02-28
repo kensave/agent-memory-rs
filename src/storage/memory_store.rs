@@ -233,27 +233,7 @@ impl MemoryStore {
                 let distance: f64 = row.get(16)?;  // distance is the last column
                 let similarity_score = 1.0 - distance;
                 let importance_score: f64 = row.get(5)?;
-                let created_at: Option<String> = row.get(14)?;
-                
-                // Apply temporal weighting: score = similarity * exp(-λt)
-                // λ (lambda) = 0.0001 (decay rate - adjust to control how fast memories fade)
-                // t = days since creation
-                let temporal_weight = if let Some(ref timestamp) = created_at {
-                    if let Ok(created) = chrono::DateTime::parse_from_rfc3339(timestamp) {
-                        let now = chrono::Utc::now();
-                        let elapsed_days = (now.timestamp() - created.timestamp()) as f64 / 86400.0;
-                        let lambda = 0.0001_f64; // Decay rate (smaller = slower decay)
-                        (-lambda * elapsed_days).exp()
-                    } else {
-                        1.0 // No decay if timestamp invalid
-                    }
-                } else {
-                    1.0 // No decay if no timestamp
-                };
-                
-                // Combined score: (similarity * temporal_weight) * 0.7 + importance * 0.3
-                let temporal_similarity = similarity_score * temporal_weight;
-                let combined_score = temporal_similarity * 0.7 + importance_score * 0.3;
+                let combined_score = similarity_score * 0.7 + importance_score * 0.3;
 
                 Ok(SearchResult {
                     memory: Memory {
@@ -273,10 +253,10 @@ impl MemoryStore {
                             .unwrap_or_default(),
                         confidence: row.get::<_, Option<f64>>(12)?.unwrap_or(0.5),
                         last_validated: row.get(13)?,
-                        created_at,
+                        created_at: row.get(14)?,
                         updated_at: Some(row.get(15)?),
                     },
-                    similarity_score: temporal_similarity, // Store temporal-weighted similarity
+                    similarity_score,
                     combined_score,
                 })
             })?;
