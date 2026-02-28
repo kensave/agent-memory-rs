@@ -1,6 +1,6 @@
 [package]
 name = "agent-memory-rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Production-ready memory system for AI agents with episodic, semantic, and procedural memory. Auto-consolidation, intelligent decay, and MCP server support."
 authors = ["Kenneth <kenneth@example.com>"]
