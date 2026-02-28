@@ -16,7 +16,6 @@ async fn main() -> Result<()> {
         println!("  consolidate --date YYYY-MM-DD");
         println!("  synopsis --workspace ID --date YYYY-MM-DD");
         println!("  stats --workspace ID");
-        println!("  prune --workspace ID --threshold FLOAT [--dry-run]");
         println!("  query --workspace ID <text> [--limit N]");
         return Ok(());
     }
@@ -90,18 +89,6 @@ async fn main() -> Result<()> {
                 .and_then(|s| s.parse().ok())
                 .expect("--workspace required");
             cli.stats(workspace_id)?;
-        }
-        "prune" => {
-            let workspace_id = args.iter().position(|a| a == "--workspace")
-                .and_then(|i| args.get(i + 1))
-                .and_then(|s| s.parse().ok())
-                .expect("--workspace required");
-            let _threshold = args.iter().position(|a| a == "--threshold")
-                .and_then(|i| args.get(i + 1))
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(0.3);
-            let dry_run = args.contains(&"--dry-run".to_string());
-            cli.prune(workspace_id, dry_run).await?;
         }
         "query" => {
             let workspace_id = args.iter().position(|a| a == "--workspace")

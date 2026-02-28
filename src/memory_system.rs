@@ -2,10 +2,11 @@ use anyhow::Result;
 use crate::{FastEmbedder, ModelType};
 use crate::storage::{Database, MemoryStore, Memory, SearchFilters, SearchResult};
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 pub struct MemorySystem {
     db: Database,
-    embedder: FastEmbedder,
+    embedder: Arc<Mutex<FastEmbedder>>,
 }
 
 impl MemorySystem {
@@ -15,7 +16,7 @@ impl MemorySystem {
         let db = Database::new(db_path)?;
         let mut embedder = FastEmbedder::with_model(model_type)?;
         embedder.load_model_sync()?;
-        Ok(MemorySystem { db, embedder })
+        Ok(MemorySystem { db, embedder: Arc::new(Mutex::new(embedder)) })
     }
 
     /// Create a new MemorySystem without loading the model.
@@ -24,23 +25,27 @@ impl MemorySystem {
     pub fn new_lazy<P: AsRef<Path>>(db_path: P, model_type: ModelType) -> Result<Self> {
         let db = Database::new(db_path)?;
         let embedder = FastEmbedder::with_model(model_type)?;
-        Ok(MemorySystem { db, embedder })
+        Ok(MemorySystem { db, embedder: Arc::new(Mutex::new(embedder)) })
     }
 
     /// Load the embedding model. Only needed if created with `new_lazy()`.
-    pub fn load_model(&mut self) -> Result<()> {
-        self.embedder.load_model_sync()
+    pub fn load_model(&self) -> Result<()> {
+        self.embedder.lock().unwrap().load_model_sync()
     }
 
     pub fn database(&self) -> &Database {
         &self.db
+    }
+    
+    pub fn embedder(&self) -> Arc<Mutex<FastEmbedder>> {
+        self.embedder.clone()
     }
 
     pub fn learn(&self, memory: &Memory) -> Result<i64> {
         let store = MemoryStore::new(self.db.clone());
         
         // Generate embedding
-        let embedding = self.embedder.embed(&memory.text)?;
+        let embedding = self.embedder.lock().unwrap().embed(&memory.text)?;
         
         // Store memory and embedding atomically
         let memory_id = store.insert_memory(memory)?;
@@ -55,7 +60,7 @@ impl MemorySystem {
         
         // Collect texts for batch embedding
         let texts: Vec<&str> = memories.iter().map(|m| m.text.as_str()).collect();
-        let embeddings = self.embedder.embed_batch(&texts)?;
+        let embeddings = self.embedder.lock().unwrap().embed_batch(&texts)?;
         
         // Store all memories and embeddings
         for (memory, embedding) in memories.iter().zip(embeddings.iter()) {
@@ -71,7 +76,7 @@ impl MemorySystem {
         let store = MemoryStore::new(self.db.clone());
         
         // Generate query embedding
-        let query_embedding = self.embedder.embed(query)?;
+        let query_embedding = self.embedder.lock().unwrap().embed(query)?;
         
         // Search with filters
         let results = store.search_similar(&query_embedding, filters, limit)?;

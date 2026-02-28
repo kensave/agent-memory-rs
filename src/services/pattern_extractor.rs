@@ -19,7 +19,7 @@ impl PatternExtractor {
         for episode in episodes {
             event_counts
                 .entry(episode.event_type.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(episode.id.unwrap_or(0));
         }
 
@@ -114,7 +114,7 @@ impl PatternExtractor {
 
         let mut clusters: HashMap<String, Vec<i64>> = HashMap::new();
         for (id, event_type) in episodes {
-            clusters.entry(event_type).or_insert_with(Vec::new).push(id);
+            clusters.entry(event_type).or_default().push(id);
         }
 
         let mut patterns = Vec::new();

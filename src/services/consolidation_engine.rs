@@ -1,6 +1,5 @@
-use crate::models::dtos::{Pattern, Procedure, Synopsis};
+use crate::models::dtos::{Pattern, Synopsis};
 use crate::services::pattern_extractor::PatternExtractor;
-use crate::services::procedural_store::ProceduralMemoryStore;
 use crate::services::synopsis_generator::DailySynopsisGenerator;
 use crate::storage::database::Database;
 use crate::storage::memory_store::{Memory, MemoryStore};
@@ -15,7 +14,6 @@ pub struct ConsolidationEngine {
     db: Database,
     pattern_extractor: PatternExtractor,
     synopsis_generator: DailySynopsisGenerator,
-    procedural_store: ProceduralMemoryStore,
     memory_store: MemoryStore,
 }
 
@@ -24,7 +22,6 @@ impl ConsolidationEngine {
         Self {
             pattern_extractor: PatternExtractor::new(db.clone()),
             synopsis_generator: DailySynopsisGenerator::new(db.clone()),
-            procedural_store: ProceduralMemoryStore::new(db.clone()),
             memory_store: MemoryStore::new(db.clone()),
             db,
         }
@@ -35,20 +32,34 @@ impl ConsolidationEngine {
         
         for pattern in patterns {
             if pattern.confidence > 0.6 {
+                // Boost importance of related existing memories
+                for episode_id in &pattern.source_episodes {
+                    let _ = self.db.execute(|conn| {
+                        let count = conn.execute(
+                            "UPDATE memories 
+                             SET importance_score = MIN(importance_score * 1.2, 1.0)
+                             WHERE ? = ANY(source_episodes)",
+                            params![episode_id]
+                        )?;
+                        Ok(count)
+                    });
+                }
+                
+                // Store pattern as high-confidence semantic memory
                 let memory = Memory {
                     id: None,
                     workspace_id,
                     agent_id: None,
                     text: pattern.description.clone(),
                     tags: Some(pattern.pattern_type.clone()),
-                    importance_score: pattern.confidence,
+                    importance_score: pattern.confidence.max(0.8),
                     access_count: 0,
                     last_accessed: None,
                     conversation_id: None,
                     parent_memory_id: None,
                     user_feedback: None,
                     source_episodes: pattern.source_episodes.clone(),
-                    confidence: pattern.confidence,
+                    confidence: pattern.confidence.max(0.8),
                     last_validated: None,
                     created_at: None,
                     updated_at: None,
@@ -62,31 +73,6 @@ impl ConsolidationEngine {
         Ok(knowledge_ids)
     }
 
-    async fn update_procedural_memory(&self, workspace_id: i64, patterns: &[Pattern]) -> Result<Vec<i64>> {
-        let mut procedure_ids = Vec::new();
-        
-        for pattern in patterns {
-            if pattern.pattern_type == "workflow" && pattern.frequency >= 2 {
-                let procedure = Procedure {
-                    id: None,
-                    workspace_id,
-                    name: pattern.description.clone(),
-                    trigger_conditions: json!({"pattern_type": pattern.pattern_type}),
-                    action_sequence: json!({"description": pattern.description}),
-                    success_rate: pattern.confidence,
-                    usage_count: pattern.frequency,
-                    last_used: None,
-                    learned_from: pattern.source_episodes.clone(),
-                    created_at: None,
-                };
-                
-                let id = self.procedural_store.store(procedure).await?;
-                procedure_ids.push(id);
-            }
-        }
-        
-        Ok(procedure_ids)
-    }
 
     async fn mark_episodes_for_archival(&self, workspace_id: i64, date: &str) -> Result<usize> {
         self.db.execute(|conn| {
@@ -114,25 +100,31 @@ impl ConsolidationEngineTrait for ConsolidationEngine {
         })?;
 
         let first_workspace = workspaces.first().copied().unwrap_or(1);
+        let mut first_synopsis = None;
 
         for workspace_id in &workspaces {
             let patterns = self.pattern_extractor.extract_all_patterns(*workspace_id)?;
             
             let knowledge_ids = self.update_semantic_memory(*workspace_id, &patterns).await?;
-            let procedure_ids = self.update_procedural_memory(*workspace_id, &patterns).await?;
             
             let mut synopsis = self.synopsis_generator.generate_synopsis(*workspace_id, &date)?;
             synopsis.new_knowledge_ids = knowledge_ids;
-            synopsis.new_procedure_ids = procedure_ids;
             
             self.synopsis_generator.store_synopsis(&synopsis)?;
+            
+            // Save first workspace synopsis for return
+            if *workspace_id == first_workspace {
+                first_synopsis = Some(synopsis);
+            }
             
             self.mark_episodes_for_archival(*workspace_id, &date).await?;
         }
 
-        let synopsis = self.synopsis_generator.generate_synopsis(first_workspace, &date)?;
-        
-        Ok(synopsis)
+        // Return the synopsis that was generated before archival
+        Ok(first_synopsis.unwrap_or_else(|| {
+            // Fallback if no workspaces (shouldn't happen)
+            self.synopsis_generator.generate_synopsis(first_workspace, &date).unwrap_or_default()
+        }))
     }
 
     async fn extract_patterns(&self, episode_ids: Vec<i64>) -> Result<Vec<Self::Pattern>> {

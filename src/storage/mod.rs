@@ -1,5 +1,4 @@
 pub mod database;
-pub mod schema;
 pub mod memory_store;
 
 pub use database::Database;

@@ -45,6 +45,22 @@ pub struct Synopsis {
     pub created_at: Option<String>,
 }
 
+impl Default for Synopsis {
+    fn default() -> Self {
+        Self {
+            date: String::new(),
+            workspace_id: 0,
+            agent_id: None,
+            summary: String::new(),
+            key_insights: Vec::new(),
+            new_knowledge_ids: Vec::new(),
+            new_procedure_ids: Vec::new(),
+            stats: serde_json::json!({}),
+            created_at: None,
+        }
+    }
+}
+
 /// Pattern extracted from episodic memories
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Pattern {

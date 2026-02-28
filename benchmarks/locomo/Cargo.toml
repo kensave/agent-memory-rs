@@ -1,0 +1,17 @@
+[package]
+name = "locomo-benchmark"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "locomo-loader"
+path = "src/loader.rs"
+
+[[bin]]
+name = "locomo-eval"
+path = "src/evaluator.rs"
+
+[dependencies]
+agent-memory-rs = { path = "../.." }
+serde_json = "1.0"
+anyhow = "1.0"

@@ -149,8 +149,8 @@ mod tests {
 
         let manager = WorkspaceManager::with_base_dir(base_dir, ModelType::MiniLM).unwrap();
 
-        let mut system1 = manager.get_or_create_workspace("ws1").unwrap();
-        let mut system2 = manager.get_or_create_workspace("ws2").unwrap();
+        let system1 = manager.get_or_create_workspace("ws1").unwrap();
+        let system2 = manager.get_or_create_workspace("ws2").unwrap();
         
         // Load models for testing
         system1.load_model().unwrap();

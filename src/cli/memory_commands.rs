@@ -114,7 +114,6 @@ impl MemoryCLI {
         println!("  Active Episodes:   {}", stats.active_episodes);
         println!("  Archived Episodes: {}", stats.archived_episodes);
         println!("  Knowledge Items:   {}", stats.knowledge_count);
-        println!("  Procedures:        {}", stats.procedure_count);
         
         let total = stats.active_episodes + stats.archived_episodes;
         if total > 0 {
@@ -124,21 +123,6 @@ impl MemoryCLI {
         Ok(())
     }
 
-    pub async fn prune(&self, workspace_id: i64, dry_run: bool) -> Result<()> {
-        if dry_run {
-            println!("🔍 Dry-run mode: No changes will be made");
-        } else {
-            println!("⚠️  Pruning memories...");
-        }
-        
-        let (episodes, knowledge, procedures) = self.manager.prune(workspace_id, dry_run).await?;
-        
-        println!("✅ Prune complete!");
-        println!("   Episodes archived:  {}", episodes);
-        println!("   Knowledge pruned:   {}", knowledge);
-        println!("   Procedures removed: {}", procedures);
-        Ok(())
-    }
 
     pub fn query(&self, workspace_id: i64, query: &str, limit: usize) -> Result<()> {
         println!("🔍 Searching for: \"{}\"", query);

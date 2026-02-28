@@ -74,7 +74,7 @@ impl DailySynopsisGenerator {
         for episode in episodes {
             let key = episode.conversation_id.clone()
                 .unwrap_or_else(|| episode.event_type.clone());
-            groups.entry(key).or_insert_with(Vec::new).push(episode);
+            groups.entry(key).or_default().push(episode);
         }
         
         groups
@@ -89,7 +89,7 @@ impl DailySynopsisGenerator {
             .collect();
 
         let positive_count = episodes.iter()
-            .filter(|e| e.valence.map_or(false, |v| v > 0.5))
+            .filter(|e| e.valence.is_some_and(|v| v > 0.5))
             .count();
         
         if positive_count > episodes.len() / 2 {
@@ -119,7 +119,7 @@ impl DailySynopsisGenerator {
         let total = episodes.len();
         let with_outcome = episodes.iter().filter(|e| e.outcome.is_some()).count();
         let positive = episodes.iter()
-            .filter(|e| e.valence.map_or(false, |v| v > 0.0))
+            .filter(|e| e.valence.is_some_and(|v| v > 0.0))
             .count();
 
         serde_json::json!({
@@ -135,7 +135,10 @@ impl DailySynopsisGenerator {
     }
 
     pub fn store_synopsis(&self, synopsis: &Synopsis) -> Result<i64> {
-        self.db.execute(|conn| {
+        use crate::storage::memory_store::MemoryStore;
+        
+        // Store in daily_synopsis table
+        let synopsis_id = self.db.execute(|conn| {
             conn.execute(
                 "INSERT INTO daily_synopsis 
                  (date, workspace_id, agent_id, summary, key_insights, 
@@ -153,6 +156,38 @@ impl DailySynopsisGenerator {
                 ]
             )?;
             Ok(conn.last_insert_rowid())
-        })
+        })?;
+        
+        // Store as searchable semantic memory with 'synopsis' tag
+        let memory_store = MemoryStore::new(self.db.clone());
+        let synopsis_text = format!(
+            "Daily Synopsis ({}): {} Key insights: {}",
+            synopsis.date,
+            synopsis.summary,
+            synopsis.key_insights.join(", ")
+        );
+        
+        let memory = crate::storage::Memory {
+            id: None,
+            workspace_id: synopsis.workspace_id,
+            agent_id: synopsis.agent_id,
+            text: synopsis_text,
+            tags: Some("synopsis".to_string()),
+            importance_score: 0.9,
+            access_count: 0,
+            last_accessed: None,
+            conversation_id: None,
+            parent_memory_id: None,
+            user_feedback: None,
+            source_episodes: vec![],
+            confidence: 0.9,
+            last_validated: None,
+            created_at: None,
+            updated_at: None,
+        };
+        
+        let _ = memory_store.insert_memory(&memory);
+        
+        Ok(synopsis_id)
     }
 }

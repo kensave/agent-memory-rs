@@ -2,18 +2,25 @@ use anyhow::Result;
 use async_trait::async_trait;
 use rusqlite::params;
 use serde_json;
+use std::sync::{Arc, Mutex};
 
+use crate::embedder::FastEmbedder;
 use crate::models::Episode;
 use crate::storage::Database;
 use crate::traits::MemoryStore;
 
 pub struct EpisodicMemoryStore {
     db: Database,
+    embedder: Option<Arc<Mutex<FastEmbedder>>>,
 }
 
 impl EpisodicMemoryStore {
     pub fn new(db: Database) -> Self {
-        Self { db }
+        Self { db, embedder: None }
+    }
+    
+    pub fn with_embedder(db: Database, embedder: Arc<Mutex<FastEmbedder>>) -> Self {
+        Self { db, embedder: Some(embedder) }
     }
 }
 
@@ -23,9 +30,16 @@ impl MemoryStore for EpisodicMemoryStore {
     type Id = i64;
 
     async fn store(&self, memory: Self::Memory) -> Result<Self::Id> {
+        let context_json = serde_json::to_string(&memory.context)?;
+        
+        // Generate embedding from context
+        let embedding = if let Some(ref embedder) = self.embedder {
+            Some(embedder.lock().unwrap().embed(&context_json)?)
+        } else {
+            None
+        };
+        
         self.db.execute(|conn| {
-            let context_json = serde_json::to_string(&memory.context)?;
-            
             conn.execute(
                 "INSERT INTO episodes (workspace_id, agent_id, timestamp, conversation_id, event_type, context, outcome, valence, archived)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
@@ -42,7 +56,22 @@ impl MemoryStore for EpisodicMemoryStore {
                 ],
             )?;
             
-            Ok(conn.last_insert_rowid())
+            let episode_id = conn.last_insert_rowid();
+            
+            // Store embedding in vec0 format (reuse existing table with negative IDs)
+            if let Some(emb) = embedding {
+                let embedding_blob: Vec<u8> = emb.iter()
+                    .flat_map(|&f| f.to_le_bytes())
+                    .collect();
+                
+                // Use negative ID to distinguish episodes from semantic memories
+                conn.execute(
+                    "INSERT INTO vec0 (memory_id, embedding) VALUES (?1, ?2)",
+                    params![-episode_id, embedding_blob],
+                )?;
+            }
+            
+            Ok(episode_id)
         })
     }
 
@@ -105,7 +134,8 @@ impl MemoryStore for EpisodicMemoryStore {
     async fn delete(&self, id: Self::Id) -> Result<()> {
         self.db.execute(|conn| {
             conn.execute("DELETE FROM episodes WHERE id = ?1", [id])?;
-            conn.execute("DELETE FROM vec_episodes WHERE episode_id = ?1", [id])?;
+            // Episodes stored in vec0 with negative IDs
+            conn.execute("DELETE FROM vec0 WHERE memory_id = ?1", [-id])?;
             Ok(())
         })
     }

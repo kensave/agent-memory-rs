@@ -1,6 +1,5 @@
 use crate::{WorkspaceManager, ModelType, MemorySystem};
 use crate::services::memory_manager::MemoryManager;
-use crate::storage::database::Database;
 use anyhow::Result;
 use rmcp::{
     model::{
@@ -40,9 +39,10 @@ impl MemoryMcpServer {
             Ok(id)
         })?;
         
-        // Create MemoryManager for consolidation
-        let db = Database::new(&format!("{}.db", workspace_name))?;
-        let memory_manager = Arc::new(MemoryManager::new(db));
+        // Create MemoryManager using the SAME database and embedder
+        let db = memory_system.database().clone();
+        let embedder = memory_system.embedder();
+        let memory_manager = Arc::new(MemoryManager::with_embedder(db, embedder));
         
         Ok(Self {
             memory_system: Arc::new(Mutex::new(memory_system)),
@@ -108,13 +108,13 @@ impl MemoryMcpServer {
             
             // Load embedding model
             tracing::info!("Loading embedding model on first use...");
-            let mut system = self.memory_system.lock().await;
+            let system = self.memory_system.lock().await;
             
             if let Some(ref mut f) = log {
                 let _ = writeln!(f, "[{}] System lock acquired, calling load_model...", chrono::Local::now().format("%H:%M:%S%.3f"));
             }
             
-            let result = system.load_model().map_err(|e| ErrorData::new(
+            system.load_model().map_err(|e| ErrorData::new(
                 ErrorCode::INTERNAL_ERROR,
                 format!("Failed to load model: {}", e),
                 None,
@@ -196,6 +196,16 @@ struct LearnInput {
     importance_score: Option<f64>,
     #[serde(default)]
     conversation_id: Option<String>,
+    #[serde(default = "default_event_type")]
+    event_type: String,
+    #[serde(default)]
+    context: Option<serde_json::Value>,
+    #[serde(default)]
+    timestamp: Option<String>,
+}
+
+fn default_event_type() -> String {
+    "user_input".to_string()
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -340,32 +350,59 @@ impl ServerHandler for MemoryMcpServer {
                         None,
                     ))?;
 
-                let memory = crate::storage::Memory {
+                let importance = input.importance_score.unwrap_or(0.5);
+                
+                // Store as Episode
+                let episode = crate::models::dtos::Episode {
                     id: None,
                     workspace_id: self.workspace_id,
                     agent_id: input.agent_id,
-                    text: input.text,
-                    tags: input.tags,
-                    importance_score: input.importance_score.unwrap_or(0.5),
-                    access_count: 0,
-                    last_accessed: None,
-                    conversation_id: input.conversation_id,
-                    parent_memory_id: None,
-                    user_feedback: None,
-                    source_episodes: vec![],
-                    confidence: 0.5,
-                    last_validated: None,
+                    timestamp: input.timestamp.unwrap_or_else(|| chrono::Local::now().to_rfc3339()),
+                    conversation_id: input.conversation_id.clone(),
+                    event_type: input.event_type,
+                    context: input.context.unwrap_or_else(|| serde_json::json!({"text": input.text.clone()})),
+                    outcome: None,
+                    valence: None,
+                    archived: false,
                     created_at: None,
-                    updated_at: None,
                 };
-
-                let memory_id = system
-                    .learn(&memory)
+                
+                let episode_id = self.memory_manager.store_episode(episode).await
                     .map_err(|e| ErrorData::new(
+                        ErrorCode::INTERNAL_ERROR,
+                        format!("Failed to store episode: {}", e),
+                        None,
+                    ))?;
+                
+                // Optionally store in semantic memory if high importance
+                let memory_id = if importance > 0.7 {
+                    let memory = crate::storage::Memory {
+                        id: None,
+                        workspace_id: self.workspace_id,
+                        agent_id: input.agent_id,
+                        text: input.text,
+                        tags: input.tags,
+                        importance_score: importance,
+                        access_count: 0,
+                        last_accessed: None,
+                        conversation_id: input.conversation_id,
+                        parent_memory_id: None,
+                        user_feedback: None,
+                        source_episodes: vec![episode_id],
+                        confidence: 0.8,
+                        last_validated: None,
+                        created_at: None,
+                        updated_at: None,
+                    };
+                    
+                    Some(system.learn(&memory).map_err(|e| ErrorData::new(
                         ErrorCode::INTERNAL_ERROR,
                         format!("Failed to learn: {}", e),
                         None,
-                    ))?;
+                    ))?)
+                } else {
+                    None
+                };
                 
                 // Drop lock before async operation
                 drop(system);
@@ -374,6 +411,7 @@ impl ServerHandler for MemoryMcpServer {
                 self.check_consolidation().await;
 
                 Ok(CallToolResult::success(vec![Content::text(json!({
+                    "episode_id": episode_id,
                     "memory_id": memory_id,
                     "status": "success"
                 }).to_string())]))
@@ -388,25 +426,16 @@ impl ServerHandler for MemoryMcpServer {
                         None,
                     ))?;
 
-                let filters = crate::storage::SearchFilters {
-                    workspace_id: Some(self.workspace_id),
-                    agent_id: input.agent_id,
-                    min_importance: input.min_importance,
-                    max_importance: input.max_importance,
-                    conversation_id: input.conversation_id,
-                    ..Default::default()
-                };
-
-                let results = system
-                    .search(&input.query, &filters, input.limit.min(100))
+                // Drop system lock, use manager for hierarchical retrieval
+                drop(system);
+                
+                let results = self.memory_manager
+                    .retrieve_hierarchical(&input.query, self.workspace_id, input.limit.min(100))
                     .map_err(|e| ErrorData::new(
                         ErrorCode::INTERNAL_ERROR,
                         format!("Failed to search: {}", e),
                         None,
                     ))?;
-                
-                // Drop lock before async operation
-                drop(system);
                 
                 // Check if consolidation needed
                 self.check_consolidation().await;
