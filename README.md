@@ -29,7 +29,7 @@ Agent Memory RS provides three types of memory for AI agents:
 ✅ **Pattern Extraction** - Identifies recurring themes and successful workflows  
 ✅ **Daily Synopsis** - Automatic daily summaries with key insights  
 ✅ **MCP Server** - Full pipeline integration with learn/search tools  
-✅ **Production Ready** - 42 passing tests, SOLID architecture, thread-safe  
+✅ **Production Ready** - 38 passing tests, SOLID architecture, thread-safe  
 
 ### Implementation Status
 
@@ -146,20 +146,26 @@ Models are downloaded once and cached in the standard HuggingFace cache:
 ### CLI Usage
 
 ```bash
-# View daily synopsis
-cargo run --bin agent-memory-cli synopsis --date 2026-01-31
+# Create workspace
+cargo run --bin agent-memory-cli workspace create --name my-project --path /path/to/project
+
+# List workspaces
+cargo run --bin agent-memory-cli workspace list
+
+# Store episode
+cargo run --bin agent-memory-cli store --workspace 1 --type user_query --context "How do I use Rust?" --outcome "Provided tutorial" --valence 0.8
 
 # Query memories
-cargo run --bin agent-memory-cli query "rust programming" --limit 10
+cargo run --bin agent-memory-cli query --workspace 1 "rust programming" --limit 10
 
-# Check system health
-cargo run --bin agent-memory-cli stats --workspace 1
+# View daily synopsis
+cargo run --bin agent-memory-cli synopsis --workspace 1 --date 2026-01-31
 
 # Manual consolidation
 cargo run --bin agent-memory-cli consolidate --date 2026-01-31
 
-# Prune old memories
-cargo run --bin agent-memory-cli prune --threshold 0.3 --dry-run
+# Check system health
+cargo run --bin agent-memory-cli stats --workspace 1
 ```
 
 ### Programmatic Usage
@@ -226,17 +232,14 @@ The skill is loaded on-demand, providing guidance only when needed without consu
 ```
 MemoryManager (Facade)
     ├── EpisodicMemoryStore      - Raw interaction events
-    ├── SemanticMemoryStore      - Distilled knowledge
-    ├── ProceduralMemoryStore    - Learned workflows
     ├── HybridRetrievalEngine    - BM25 + Vector search
     ├── ConsolidationEngine      - Pattern extraction
-    ├── DecayManager             - Intelligent archival
-    ├── SynopsisGenerator        - Daily briefs
-    └── HealthMonitor            - System metrics
+    ├── PatternExtractor         - Identifies recurring themes
+    └── SynopsisGenerator        - Daily summaries
 ```
 
 **Built with SOLID principles:**
-- 5 core traits (IMemoryStore, IRetriever, IConsolidator, IDecay, IEmbedder)
+- 5 core traits (MemoryStore, MemoryRetriever, ConsolidationEngine, DecayManager, EmbeddingService)
 - Dependency injection throughout
 - Thread-safe Database pattern: `Arc<Mutex<Connection>>`
 
@@ -253,7 +256,7 @@ cargo test --test '*'
 cargo test -- --nocapture
 ```
 
-**Test Coverage:** 44 integration tests covering full lifecycle
+**Test Coverage:** 38 integration tests covering full lifecycle
 
 ## 📊 Performance
 
@@ -303,67 +306,20 @@ Inspired by cognitive science research on human memory systems and modern AI age
 memory-cli prune --workspace 1 --dry-run
 ```
 
-## 📚 Documentation
-
-- **[Complete API Reference](docs/README.md)** - Full API documentation with examples
-- **[MCP Auto-Consolidation](docs/MCP_AUTO_CONSOLIDATION.md)** - How auto-consolidation works
-- **[Architecture](docs/architecture-redesign.md)** - System architecture and design decisions
-- **[Interface Design](docs/interface-design.md)** - SOLID principles and trait design
-- **[Schema](docs/schema-extensions-v2.md)** - Database schema and migrations
-
-## 🏗️ Architecture
-
-### Memory Hierarchy (5 Levels)
-
-```
-Level 1: Working Memory (Current Session)
-    ↓
-Level 2: Daily Synopsis (Compressed daily summary)
-    ↓
-Level 3: Semantic Memory (Distilled knowledge)
-    ↓
-Level 4: Episodic Memory (Recent events, last 7-30 days)
-    ↓
-Level 5: Archived Episodes (Old events, >30 days)
-```
-
-### Core Services
-
-```
-MemoryManager (Facade)
-    ├── EpisodicMemoryStore    - Raw interaction events
-    ├── SemanticMemoryStore    - Distilled knowledge
-    ├── ProceduralMemoryStore  - Learned workflows
-    ├── HybridRetrievalEngine  - BM25 + Vector search
-    ├── ConsolidationEngine    - Pattern extraction & synopsis
-    └── DecayManager           - Intelligent archival
-```
-
-### Auto-Consolidation
-
-The MCP server automatically:
-1. **On startup**: Consolidates yesterday's memories (background, non-blocking)
-2. **Every 20 messages**: Triggers consolidation (configurable, background)
-
 ## 🧪 Testing
 
 ```bash
 # Run all tests
 cargo test
 
-# Run specific test suite
-cargo test --test test_lifecycle
+# Run integration tests only
+cargo test --test '*'
 
 # Run with output
 cargo test -- --nocapture
 ```
 
-**Test Coverage:**
-- 44 integration tests
-- Full lifecycle tests (store → consolidate → retrieve → decay → archive)
-- Hierarchical retrieval tests
-- CLI tests
-- Health monitoring tests
+**Test Coverage:** 38 integration tests covering full lifecycle
 
 ## 🔧 Development
 
@@ -371,14 +327,14 @@ cargo test -- --nocapture
 
 ```
 src/
-├── services/          # 12 core services
+├── services/          # 6 core services
 ├── storage/           # Database and memory store
 ├── traits/            # 5 SOLID traits
 ├── models/            # DTOs and types
 ├── cli/               # CLI commands
 └── mcp/               # MCP server
 
-tests/                 # 13 integration test files
+tests/                 # 16 integration test files
 docs/                  # 5 documentation files
 ```
 

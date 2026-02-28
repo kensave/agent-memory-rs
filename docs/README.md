@@ -8,7 +8,6 @@ A comprehensive memory management system for AI agents with episodic, semantic, 
 
 - **[Design Rationale](DESIGN_RATIONALE.md)** - Design decisions, formulas, algorithms, and research
 - **[MCP Auto-Consolidation](MCP_AUTO_CONSOLIDATION.md)** - How auto-consolidation works
-- **[Architecture](architecture-redesign.md)** - System architecture and design decisions
 - **[Interface Design](interface-design.md)** - SOLID principles and trait design
 - **[Schema](schema-extensions-v2.md)** - Database schema and migrations
 
@@ -18,12 +17,11 @@ A comprehensive memory management system for AI agents with episodic, semantic, 
 
 ```
 MemoryManager (Facade)
-    ├── EpisodicMemoryStore    - Raw interaction events
-    ├── SemanticMemoryStore    - Distilled knowledge
-    ├── ProceduralMemoryStore  - Learned workflows
-    ├── HybridRetrievalEngine  - BM25 + Vector search
-    ├── ConsolidationEngine    - Pattern extraction & synopsis
-    └── DecayManager           - Intelligent archival
+    ├── EpisodicMemoryStore      - Raw interaction events
+    ├── HybridRetrievalEngine    - BM25 + Vector search
+    ├── ConsolidationEngine      - Pattern extraction
+    ├── PatternExtractor         - Identifies recurring themes
+    └── SynopsisGenerator        - Daily summaries
 ```
 
 ### Memory Types
@@ -31,17 +29,12 @@ MemoryManager (Facade)
 1. **Episodic Memory**: Stores specific events with full context
    - Event type, timestamp, conversation ID
    - Outcome, valence (emotional value)
-   - Archival support
+   - Vector embeddings for semantic search
 
-2. **Semantic Memory**: Distilled facts and patterns
-   - Source episode tracking
-   - Confidence scores
-   - Access count and validation
-
-3. **Procedural Memory**: Learned workflows
-   - Trigger conditions
-   - Action sequences
-   - Success rate tracking
+2. **Consolidated Memories**: Extracted patterns and themes
+   - Created through consolidation process
+   - Pattern extraction from episodes
+   - Daily synopsis generation
 
 ## Quick Start
 
@@ -185,43 +178,6 @@ Budget allocation:
 - Episodic: 25%
 - Procedural: 10%
 
-### HealthMonitor
-
-Tracks memory system health:
-
-```rust
-let monitor = HealthMonitor::new(manager);
-let metrics = monitor.calculate_metrics(workspace_id)?;
-let health = monitor.check_health(workspace_id)?;
-```
-
-Metrics:
-- Total memories
-- Active ratio
-- Average confidence
-- Recent activity
-- Health score (0-1)
-
-## Configuration
-
-### Decay Thresholds
-
-```rust
-// Archive episodes with recency < 0.3
-manager.prune(workspace_id, false).await?;
-
-// Custom thresholds
-decay_manager.archive_episodes(workspace_id, 0.2, false).await?;
-decay_manager.prune_low_confidence(workspace_id, 0.4, false).await?;
-decay_manager.remove_inactive_procedures(workspace_id, 90, false).await?;
-```
-
-### Composite Score Weights
-
-```rust
-let calculator = CompositeScoreCalculator::with_weights(0.3, 0.4, 0.3);
-```
-
 ## Performance
 
 ### Benchmarks
@@ -262,7 +218,7 @@ Total: 44 integration tests
 Each service has one clear purpose:
 - `EpisodicMemoryStore` - Episode storage only
 - `PatternExtractor` - Pattern analysis only
-- `DecayManager` - Cleanup only
+- `ConsolidationEngine` - Consolidation only
 
 ### Open/Closed
 Extend via traits without modifying existing code:
@@ -277,7 +233,7 @@ All stores implement `MemoryStore` trait interchangeably.
 Clients depend only on methods they use:
 - `MemoryStore` - CRUD operations
 - `ConsolidationEngine` - Consolidation only
-- `DecayManager` - Decay only
+- `MemoryRetriever` - Search only
 
 ### Dependency Inversion
 High-level modules depend on abstractions (traits), not concrete implementations.

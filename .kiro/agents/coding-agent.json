@@ -1,0 +1,29 @@
+{
+  "name": "coding-agent",
+  "description": "Full-access coding agent for memory-rs workspace",
+  "tools": [
+    "fs_read",
+    "fs_write",
+    "execute_bash",
+    "grep",
+    "code",
+    "@memory"
+  ],
+  "allowedTools": [
+    "*",
+    "@memory/learn",
+    "@memory/search"
+  ],
+  "resources": [
+    "file://.kiro/SubAgents.md",
+    "file://.kiro/agents/*.json",
+    "file://README.md",
+    "file://.kiro/projects/memory-rs/*.md"
+  ],
+  "mcpServers": {
+    "memory": {
+      "command": "./target/release/agent-memory-mcp",
+      "args": ["memory-rs"]
+    }
+  }
+}

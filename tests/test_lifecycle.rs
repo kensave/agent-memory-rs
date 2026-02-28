@@ -1,8 +1,6 @@
 use agent_memory_rs::models::dtos::Episode;
 use agent_memory_rs::services::memory_manager::MemoryManager;
 use agent_memory_rs::storage::database::Database;
-use agent_memory_rs::traits::consolidation::ConsolidationEngine;
-use agent_memory_rs::traits::memory_store::MemoryStore;
 use serde_json::json;
 use std::fs;
 
@@ -50,11 +48,7 @@ async fn test_full_memory_lifecycle() {
     let results = manager.retrieve("task", workspace_id, 10).unwrap();
     assert!(!results.is_empty());
 
-    // Step 5: Prune (dry-run)
-    let (episodes, knowledge, procedures) = manager.prune(workspace_id, true).await.unwrap();
-    assert!(episodes >= 0);
-
-    // Step 6: Check stats
+    // Step 5: Check stats
     let stats = manager.get_memory_stats(workspace_id).unwrap();
     assert!(stats.active_episodes > 0 || stats.archived_episodes > 0);
 }

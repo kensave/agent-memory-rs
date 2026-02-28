@@ -20,7 +20,6 @@ Each trait has ONE reason to change:
 - `MemoryRetriever` - only retrieval/search operations
 - `EmbeddingService` - only embedding generation
 - `ConsolidationEngine` - only consolidation orchestration
-- `DecayManager` - only decay/archival operations
 
 ### 2. Open/Closed Principle (OCP)
 - Traits are open for extension (new implementations)
@@ -72,8 +71,6 @@ async fn store_batch(&self, memories: Vec<Self::Memory>) -> Result<Vec<Self::Id>
 
 **Implementations**:
 - `EpisodicMemoryStore` (stores Episode)
-- `ProceduralMemoryStore` (stores Procedure)
-- `SemanticMemoryStore` (stores Memory - existing)
 
 ---
 
@@ -162,34 +159,6 @@ async fn generate_synopsis(&self, date: String) -> Result<Self::Synopsis>
 - `MemoryStore` (to retrieve episodes)
 - `MemoryRetriever` (to search patterns)
 - `EmbeddingService` (to generate synopsis embeddings)
-
----
-
-### 5. DecayManager
-
-**Purpose**: Manage memory decay and archival
-
-**Responsibilities**:
-- Calculate composite scores
-- Archive low-scoring memories
-- Prune redundant memories
-- Remove unused procedures
-
-**Methods**:
-```rust
-fn calculate_score(&self, recency: f64, relevance: f64, utility: f64) -> f64
-async fn archive_low_scoring(&self, threshold: f64, dry_run: bool) -> Result<Vec<i64>>
-async fn prune_redundant(&self, similarity_threshold: f64, dry_run: bool) -> Result<Vec<i64>>
-async fn remove_unused(&self, days_inactive: i64, dry_run: bool) -> Result<Vec<i64>>
-```
-
-**Implementations**:
-- `CompositeDecayManager` (uses composite scoring)
-- `SimpleDecayManager` (time-based only)
-
-**Dependencies** (via DIP):
-- `MemoryStore` (to update/delete memories)
-- `MemoryRetriever` (to find candidates)
 
 ---
 
@@ -424,9 +393,8 @@ where
 3. `/Users/kenneth/workspace/memory-rs/src/traits/retriever.rs` - MemoryRetriever trait
 4. `/Users/kenneth/workspace/memory-rs/src/traits/embedder.rs` - EmbeddingService trait
 5. `/Users/kenneth/workspace/memory-rs/src/traits/consolidation.rs` - ConsolidationEngine trait
-6. `/Users/kenneth/workspace/memory-rs/src/traits/decay.rs` - DecayManager trait
-7. `/Users/kenneth/workspace/memory-rs/src/models/mod.rs` - Models module
-8. `/Users/kenneth/workspace/memory-rs/src/models/dtos.rs` - DTOs
+6. `/Users/kenneth/workspace/memory-rs/src/models/mod.rs` - Models module
+7. `/Users/kenneth/workspace/memory-rs/src/models/dtos.rs` - DTOs
 
 ---
 

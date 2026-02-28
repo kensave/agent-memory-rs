@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use super::Database;
 
 fn is_zero(n: &i64) -> bool { *n == 0 }
-fn is_empty_vec(v: &Vec<i64>) -> bool { v.is_empty() }
+fn is_empty_vec(v: &[i64]) -> bool { v.is_empty() }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Memory {

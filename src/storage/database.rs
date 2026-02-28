@@ -14,6 +14,7 @@ pub struct Database {
 impl Database {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         // Initialize sqlite-vec extension globally
+        #[allow(clippy::missing_transmute_annotations)]
         unsafe {
             sqlite3_auto_extension(Some(std::mem::transmute(sqlite3_vec_init as *const ())));
         }

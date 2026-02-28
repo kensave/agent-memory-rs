@@ -1,0 +1,29 @@
+{
+  "name": "research-agent",
+  "description": "Research agent with web access, file operations, and memory",
+  "tools": [
+    "fs_read",
+    "fs_write",
+    "grep",
+    "web_search",
+    "fetch",
+    "@memory"
+  ],
+  "allowedTools": [
+    "*",
+    "@memory/learn",
+    "@memory/search"
+  ],
+  "resources": [
+    "file://.kiro/SubAgents.md",
+    "file://.kiro/agents/*.json",
+    "file://README.md",
+    "file://.kiro/projects/memory-rs/*.md"
+  ],
+  "mcpServers": {
+    "memory": {
+      "command": "./target/release/agent-memory-mcp",
+      "args": ["memory-rs"]
+    }
+  }
+}

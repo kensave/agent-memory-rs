@@ -2,7 +2,6 @@ use agent_memory_rs::cli::memory_commands::MemoryCLI;
 use agent_memory_rs::models::dtos::Episode;
 use agent_memory_rs::services::memory_manager::MemoryManager;
 use agent_memory_rs::storage::database::Database;
-use agent_memory_rs::traits::memory_store::MemoryStore;
 use serde_json::json;
 use std::fs;
 
@@ -72,21 +71,5 @@ async fn test_cli_query() {
 
     let cli = MemoryCLI::new(db_path).unwrap();
     let result = cli.query(workspace_id, "test", 10);
-    assert!(result.is_ok());
-}
-
-#[tokio::test]
-async fn test_cli_prune() {
-    let db_path = "/tmp/test_cli_prune.db";
-    let _ = fs::remove_file(db_path);
-
-    let db = Database::new(db_path).unwrap();
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES (?, ?)", ["test", "/tmp"])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
-
-    let cli = MemoryCLI::new(db_path).unwrap();
-    let result = cli.prune(workspace_id, true).await;
     assert!(result.is_ok());
 }

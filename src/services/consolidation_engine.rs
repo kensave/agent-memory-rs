@@ -4,11 +4,9 @@ use crate::services::synopsis_generator::DailySynopsisGenerator;
 use crate::storage::database::Database;
 use crate::storage::memory_store::{Memory, MemoryStore};
 use crate::traits::consolidation::ConsolidationEngine as ConsolidationEngineTrait;
-use crate::traits::memory_store::MemoryStore as MemoryStoreTrait;
 use anyhow::Result;
 use async_trait::async_trait;
 use rusqlite::params;
-use serde_json::json;
 
 pub struct ConsolidationEngine {
     db: Database,

@@ -334,9 +334,8 @@ fn test_migration_to_v2() {
 ## Next Steps
 
 1. ✅ Schema migration complete
-2. ⏭️ Implement EpisodicMemoryStore (Task 3)
-3. ⏭️ Implement ProceduralMemoryStore (Task 4)
-4. ⏭️ Implement synopsis generation (Task 9)
+2. ✅ Implement EpisodicMemoryStore (Task 3)
+3. ✅ Implement synopsis generation (Task 9)
 
 ---
 
