@@ -11,10 +11,6 @@ path = "src/loader.rs"
 name = "locomo-eval"
 path = "src/evaluator.rs"
 
-[[bin]]
-name = "locomo-eval-hybrid"
-path = "src/bin/locomo-eval-hybrid.rs"
-
 [dependencies]
 agent-memory-rs = { path = "../.." }
 serde_json = "1.0"

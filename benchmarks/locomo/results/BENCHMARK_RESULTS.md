@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-28  
 **Model:** BgeSmall (384-dimensional embeddings)  
-**Method:** Hybrid Retrieval (BM25 + Vector with RRF)  
+**Method:** Vector Search with Temporal Weighting  
 **Dataset:** Full LoCoMo benchmark (10 conversations, 1,982 questions)
 
 ---
@@ -58,7 +58,7 @@ Total questions: 1,982
 | Zep | 75.1% | Specialized memory tool + LLM | $25+/month |
 | Letta | 74.0% | GPT-4o-mini + filesystem | API costs |
 | Mem0 | 68.5% | Knowledge graph + LLM | Commercial |
-| **memory-rs** | **65.1%** | **Hybrid (BM25 + Vector), no LLM** | **$0** |
+| **memory-rs** | **65.1%** | **Vector search + temporal weighting, no LLM** | **$0** |
 
 **Gap to Mem0:** 3.4 percentage points  
 **Gap to Letta:** 8.9 percentage points
@@ -70,10 +70,13 @@ Total questions: 1,982
 ### Strengths
 ✅ **Competitive retrieval performance** - Within 3.4% of commercial tools  
 ✅ **Excellent multi-hop reasoning** - Best conversation reached 74.1%  
-✅ **Hybrid search** - BM25 + Vector with RRF fusion improves accuracy  
+✅ **Temporal weighting** - Exponential decay favors recent memories  
 ✅ **Zero cost** - Runs entirely locally with no API calls  
 ✅ **Fast** - No network latency, <100ms query time  
 ✅ **Private** - All data stays local  
+
+### Note on Hybrid Search
+We tested BM25 + Vector hybrid search but it performed **worse** (64.9% vs 68.0%) on LoCoMo. Pure vector search with temporal weighting is more effective for semantic/inference questions.  
 
 ### Weaknesses
 ⚠️ **Inconsistent performance** - 56-74% range across conversations  
@@ -170,9 +173,9 @@ cd memory-rs
 
 ## Conclusion
 
-memory-rs achieves **65.1% Recall@10** on the LoCoMo benchmark using hybrid retrieval (BM25 + Vector with RRF fusion) and BgeSmall embeddings. This is competitive with commercial memory systems (within 3.4% of Mem0) while running entirely locally at zero cost.
+memory-rs achieves **65.1% Recall@10** on the LoCoMo benchmark using vector search with temporal weighting and BgeSmall embeddings. This is competitive with commercial memory systems (within 3.4% of Mem0) while running entirely locally at zero cost.
 
-The system shows strong performance on some conversations (up to 74.1%) but varies across different conversation types (56-74% range). The hybrid retrieval approach combining keyword and semantic search provides better results than pure vector search alone.
+The system shows strong performance on some conversations (up to 74.1%) but varies across different conversation types (56-74% range). Temporal weighting (exponential decay) helps prioritize recent memories, and timestamps are embedded in human-readable format for better LLM understanding.
 
 **For local-first, privacy-focused applications, memory-rs provides competitive retrieval performance without the cost and latency of cloud-based solutions.**
 

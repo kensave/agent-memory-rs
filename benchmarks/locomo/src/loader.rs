@@ -146,7 +146,18 @@ fn main() -> anyhow::Result<()> {
             let speaker = turn["speaker"].as_str().unwrap();
             let text = turn["text"].as_str().unwrap();
             
-            let memory_text = format!("[{}] {}: {}", dia_id, speaker, text);
+            // Format timestamp for embedding (human-readable)
+            let timestamp_text = if let Some(ref ts) = session_timestamp {
+                if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(ts) {
+                    format!("[{}] ", dt.format("%B %d, %Y at %I:%M %p"))
+                } else {
+                    String::new()
+                }
+            } else {
+                String::new()
+            };
+            
+            let memory_text = format!("{}[{}] {}: {}", timestamp_text, dia_id, speaker, text);
             let tags = format!("locomo,{},session_{},{}", sample_id, session_num, dia_id);
             
             let memory = Memory {
