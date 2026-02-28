@@ -1,5 +1,9 @@
 # Agent Memory RS
 
+<p align="center">
+  <img src="logo.png" alt="Agent Memory RS Logo" width="200"/>
+</p>
+
 **Episodic memory system for AI agents with vector search, exposed via MCP server.**
 
 > **Verified Performance:** 72.6% R@10 on LoCoMo benchmark (long-context memory retrieval)
