@@ -30,9 +30,9 @@ fn test_migration_to_v2() {
     let version: i32 = db.execute(|conn| {
         Ok(conn.query_row("SELECT MAX(version) FROM schema_version", [], |row| row.get(0))?)
     }).unwrap();
-    assert_eq!(version, 1, "Schema version should be 1");
+    assert_eq!(version, 2, "Schema version should be 2");
 
-    // Verify episodes table structure
+    // Verify episodes table structure including migration 2 columns
     let episode_columns: Vec<String> = db.execute(|conn| {
         let mut stmt = conn.prepare("PRAGMA table_info(episodes)")?;
         let columns = stmt.query_map([], |row| row.get(1))?
@@ -44,6 +44,8 @@ fn test_migration_to_v2() {
     assert!(episode_columns.contains(&"context".to_string()));
     assert!(episode_columns.contains(&"valence".to_string()));
     assert!(episode_columns.contains(&"archived".to_string()));
+    assert!(episode_columns.contains(&"access_count".to_string()), "access_count column missing from episodes");
+    assert!(episode_columns.contains(&"last_accessed".to_string()), "last_accessed column missing from episodes");
 
     println!("✓ Migration to v2 successful");
     println!("✓ All tables created: {:?}", tables);

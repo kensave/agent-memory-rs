@@ -211,13 +211,18 @@ impl Database {
                 )
                 .unwrap_or(0);
 
-            const SCHEMA_VERSION: i32 = 1;
-            
-            if current_version < SCHEMA_VERSION {
-                conn.execute(
-                    "INSERT INTO schema_version (version) VALUES (?1)",
-                    [SCHEMA_VERSION],
-                )?;
+            // Migration 2: Add access tracking to episodes
+            if current_version < 2 {
+                // Use pragma to check if columns exist (safe for re-runs)
+                let has_col: bool = conn.prepare("SELECT access_count FROM episodes LIMIT 0")
+                    .is_ok();
+                if !has_col {
+                    conn.execute_batch(
+                        "ALTER TABLE episodes ADD COLUMN access_count INTEGER DEFAULT 0;
+                         ALTER TABLE episodes ADD COLUMN last_accessed TEXT;"
+                    )?;
+                }
+                conn.execute("INSERT INTO schema_version (version) VALUES (2)", [])?;
             }
 
             Ok(())
