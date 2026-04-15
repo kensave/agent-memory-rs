@@ -62,6 +62,19 @@ impl MemoryManager {
         // Sort by score and return top N
         results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
         results.truncate(max_results);
+
+        // Track access on returned results
+        self.db.execute(|conn| {
+            for r in &results {
+                let table = if r.memory_type == "episodic" { "episodes" } else { "memories" };
+                let _ = conn.execute(
+                    &format!("UPDATE {} SET access_count = access_count + 1, last_accessed = datetime('now') WHERE id = ?1", table),
+                    rusqlite::params![r.id],
+                );
+            }
+            Ok(())
+        })?;
+
         Ok(results)
     }
 
