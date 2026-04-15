@@ -233,7 +233,8 @@ impl MemoryStore {
                 let distance: f64 = row.get(16)?;  // distance is the last column
                 let similarity_score = 1.0 - distance;
                 let importance_score: f64 = row.get(5)?;
-                let combined_score = similarity_score * 0.7 + importance_score * 0.3;
+                let confidence: f64 = row.get::<_, Option<f64>>(12)?.unwrap_or(0.5);
+                let combined_score = similarity_score * 0.5 + importance_score * 0.2 + confidence * 0.3;
 
                 Ok(SearchResult {
                     memory: Memory {
@@ -263,6 +264,16 @@ impl MemoryStore {
 
             let mut search_results: Vec<SearchResult> = results.collect::<Result<Vec<_>, _>>()?;
             search_results.sort_by(|a, b| b.combined_score.partial_cmp(&a.combined_score).unwrap());
+
+            // Track access on returned results
+            for r in &search_results {
+                if let Some(id) = r.memory.id {
+                    let _ = conn.execute(
+                        "UPDATE memories SET access_count = access_count + 1, last_accessed = datetime('now') WHERE id = ?1",
+                        params![id],
+                    );
+                }
+            }
 
             Ok(search_results)
         })
