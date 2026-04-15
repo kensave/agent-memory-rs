@@ -115,6 +115,8 @@ impl Database {
                     outcome TEXT,
                     valence REAL CHECK (valence IS NULL OR (valence >= -1.0 AND valence <= 1.0)),
                     archived INTEGER DEFAULT 0,
+                    access_count INTEGER DEFAULT 0,
+                    last_accessed TEXT,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
                     FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE SET NULL
