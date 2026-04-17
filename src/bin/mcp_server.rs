@@ -1,48 +1,40 @@
 use anyhow::Result;
 use agent_memory_rs::mcp::MemoryMcpServer;
+use clap::Parser;
+use rmcp::transport::streamable_http_server::{StreamableHttpService, session::local::LocalSessionManager};
 use rmcp::{transport::stdio, ServiceExt};
 use tracing_subscriber::EnvFilter;
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    // Initialize logging with stderr output
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .with_writer(std::io::stderr)
-        .with_ansi(false)
-        .init();
+#[derive(Parser)]
+#[command(name = "agent-memory-mcp", about = "Memory MCP server")]
+struct Args {
+    /// Workspace name (auto-detected from cwd if omitted)
+    workspace: Option<String>,
 
-    tracing::info!("Starting Memory-RS MCP Server");
+    /// Run as standalone HTTP server (e.g. --http 0.0.0.0:8230)
+    #[arg(long)]
+    http: Option<String>,
+}
 
-    // Get workspace name from args, or auto-detect from current directory
-    let workspace_name = std::env::args()
-        .nth(1)
-        .or_else(|| {
-            std::env::current_dir()
-                .ok()
-                .map(|p| {
-                    // Generate hash-prefixed name: <hash>-<dirname>
-                    // This ensures uniqueness across different paths with same directory name
-                    use std::collections::hash_map::DefaultHasher;
-                    use std::hash::{Hash, Hasher};
-                    
-                    let full_path = p.to_string_lossy();
-                    let mut hasher = DefaultHasher::new();
-                    full_path.hash(&mut hasher);
-                    let hash = hasher.finish();
-                    
-                    let dir_name = p.file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_else(|| "root".to_string());
-                    
-                    // Format: first 8 chars of hash + directory name
-                    format!("{:08x}-{}", hash, dir_name)
-                })
+fn resolve_workspace(name: Option<String>) -> String {
+    name.or_else(|| {
+        std::env::current_dir().ok().map(|p| {
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            let mut hasher = DefaultHasher::new();
+            p.to_string_lossy().hash(&mut hasher);
+            let hash = hasher.finish();
+            let dir_name = p.file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| "root".to_string());
+            format!("{:08x}-{}", hash, dir_name)
         })
-        .unwrap_or_else(|| "default".to_string());
+    })
+    .unwrap_or_else(|| "default".to_string())
+}
 
-    // Get model type from environment variable or default to BGE-Small
-    let model_type = std::env::var("MEMORY_MODEL")
+fn resolve_model() -> agent_memory_rs::ModelType {
+    std::env::var("MEMORY_MODEL")
         .ok()
         .and_then(|m| match m.to_lowercase().as_str() {
             "minilm" => Some(agent_memory_rs::ModelType::MiniLM),
@@ -50,24 +42,44 @@ async fn main() -> Result<()> {
             "bge" | "bge-small" => Some(agent_memory_rs::ModelType::BgeSmall),
             _ => None,
         })
-        .unwrap_or(agent_memory_rs::ModelType::BgeSmall);
+        .unwrap_or(agent_memory_rs::ModelType::BgeSmall)
+}
 
-    tracing::info!("Using workspace: {}", workspace_name);
-    tracing::info!("Using model: {:?}", model_type);
+#[tokio::main]
+async fn main() -> Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .with_writer(std::io::stderr)
+        .with_ansi(false)
+        .init();
 
-    // Create server
-    let server = MemoryMcpServer::new(&workspace_name, model_type)?;
-    
-    tracing::info!("Memory MCP Server ready");
-    
-    // Serve via stdio
-    let service = server
-        .serve(stdio())
-        .await
-        .inspect_err(|e| {
-            tracing::error!("Serving error: {:?}", e);
-        })?;
+    let args = Args::parse();
+    let workspace_name = resolve_workspace(args.workspace);
+    let model_type = resolve_model();
 
-    service.waiting().await?;
+    tracing::info!("workspace: {}, model: {:?}", workspace_name, model_type);
+
+    if let Some(bind_addr) = args.http {
+        // Standalone HTTP server mode
+        let service = StreamableHttpService::new(
+            move || MemoryMcpServer::new(&workspace_name, model_type).map_err(|e| {
+                std::io::Error::new(std::io::ErrorKind::Other, format!("{}", e))
+            }),
+            LocalSessionManager::default().into(),
+            Default::default(),
+        );
+        let router = axum::Router::new().nest_service("/mcp", service);
+        let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
+        tracing::info!("HTTP server listening on {}", bind_addr);
+        axum::serve(listener, router)
+            .with_graceful_shutdown(async { tokio::signal::ctrl_c().await.unwrap() })
+            .await?;
+    } else {
+        // Stdio mode (launched by Kiro)
+        let server = MemoryMcpServer::new(&workspace_name, model_type)?;
+        let service = server.serve(stdio()).await?;
+        service.waiting().await?;
+    }
+
     Ok(())
 }
