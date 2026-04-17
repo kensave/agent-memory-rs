@@ -2,7 +2,7 @@ use anyhow::Result;
 use candle_core::{Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::models::bert::{BertModel, Config as BertConfig, DTYPE};
-use tokenizers::{PaddingParams, PaddingStrategy, Tokenizer};
+use tokenizers::{PaddingParams, PaddingStrategy, TruncationParams, Tokenizer};
 use crate::models::ModelType;
 use crate::downloader::ModelDownloader;
 
@@ -43,6 +43,10 @@ impl FastEmbedder {
             strategy: PaddingStrategy::BatchLongest,
             ..Default::default()
         }));
+        tokenizer.with_truncation(Some(TruncationParams {
+            max_length: self.get_bert_config().max_position_embeddings,
+            ..Default::default()
+        })).map_err(|e| anyhow::anyhow!("Failed to set truncation: {}", e))?;
         self.tokenizer = Some(tokenizer);
         
         // Load model
@@ -65,6 +69,10 @@ impl FastEmbedder {
             strategy: PaddingStrategy::BatchLongest,
             ..Default::default()
         }));
+        tokenizer.with_truncation(Some(TruncationParams {
+            max_length: self.get_bert_config().max_position_embeddings,
+            ..Default::default()
+        })).map_err(|e| anyhow::anyhow!("Failed to set truncation: {}", e))?;
         self.tokenizer = Some(tokenizer);
         
         // Load model
