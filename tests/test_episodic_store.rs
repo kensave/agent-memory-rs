@@ -1,6 +1,6 @@
-use agent_memory_rs::storage::Database;
-use agent_memory_rs::services::EpisodicMemoryStore;
 use agent_memory_rs::models::Episode;
+use agent_memory_rs::services::EpisodicMemoryStore;
+use agent_memory_rs::storage::Database;
 use agent_memory_rs::traits::MemoryStore;
 use serde_json::json;
 
@@ -9,17 +9,22 @@ async fn test_episodic_store_crud() {
     use std::fs;
     let db_path = "/tmp/test_episodic_crud.db";
     let _ = fs::remove_file(db_path);
-    
+
     let db = Database::new(db_path).unwrap();
-    
+
     // Create workspace first
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
-    
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                [],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
+
     let store = EpisodicMemoryStore::new(db);
-    
+
     // Create episode
     let episode = Episode {
         id: None,
@@ -34,26 +39,26 @@ async fn test_episodic_store_crud() {
         archived: false,
         created_at: None,
     };
-    
+
     // Store
     let id = store.store(episode.clone()).await.unwrap();
     assert!(id > 0);
-    
+
     // Get
     let retrieved = store.get(id).await.unwrap();
     assert!(retrieved.is_some());
     let retrieved = retrieved.unwrap();
     assert_eq!(retrieved.event_type, "user_query");
     assert_eq!(retrieved.valence, Some(0.8));
-    
+
     // Update
     let mut updated = retrieved.clone();
     updated.outcome = Some("updated".to_string());
     store.update(id, updated).await.unwrap();
-    
+
     let retrieved = store.get(id).await.unwrap().unwrap();
     assert_eq!(retrieved.outcome, Some("updated".to_string()));
-    
+
     // Delete
     store.delete(id).await.unwrap();
     let retrieved = store.get(id).await.unwrap();
@@ -65,17 +70,22 @@ async fn test_episodic_store_batch() {
     use std::fs;
     let db_path = "/tmp/test_episodic_batch.db";
     let _ = fs::remove_file(db_path);
-    
+
     let db = Database::new(db_path).unwrap();
-    
+
     // Create workspace first
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
-    
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                [],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
+
     let store = EpisodicMemoryStore::new(db);
-    
+
     let episodes = vec![
         Episode {
             id: None,
@@ -104,10 +114,10 @@ async fn test_episodic_store_batch() {
             created_at: None,
         },
     ];
-    
+
     let ids = store.store_batch(episodes).await.unwrap();
     assert_eq!(ids.len(), 2);
-    
+
     // Verify both stored
     let ep1 = store.get(ids[0]).await.unwrap().unwrap();
     let ep2 = store.get(ids[1]).await.unwrap().unwrap();
@@ -120,17 +130,22 @@ async fn test_episodic_get_by_conversation() {
     use std::fs;
     let db_path = "/tmp/test_episodic_conversation.db";
     let _ = fs::remove_file(db_path);
-    
+
     let db = Database::new(db_path).unwrap();
-    
+
     // Create workspace first
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
-    
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                [],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
+
     let store = EpisodicMemoryStore::new(db);
-    
+
     // Store episodes in same conversation
     for i in 0..3 {
         let episode = Episode {
@@ -148,7 +163,7 @@ async fn test_episodic_get_by_conversation() {
         };
         store.store(episode).await.unwrap();
     }
-    
+
     let episodes = store.get_by_conversation("conv_456").unwrap();
     assert_eq!(episodes.len(), 3);
     assert_eq!(episodes[0].event_type, "event_0");
@@ -160,17 +175,22 @@ async fn test_episodic_archive() {
     use std::fs;
     let db_path = "/tmp/test_episodic_archive.db";
     let _ = fs::remove_file(db_path);
-    
+
     let db = Database::new(db_path).unwrap();
-    
+
     // Create workspace first
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
-    
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                [],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
+
     let store = EpisodicMemoryStore::new(db);
-    
+
     let episode = Episode {
         id: None,
         workspace_id,
@@ -184,12 +204,12 @@ async fn test_episodic_archive() {
         archived: false,
         created_at: None,
     };
-    
+
     let id = store.store(episode).await.unwrap();
-    
+
     // Archive
     store.archive(id).unwrap();
-    
+
     // Verify archived
     let retrieved = store.get(id).await.unwrap().unwrap();
     assert!(retrieved.archived);

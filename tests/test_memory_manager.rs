@@ -12,10 +12,15 @@ async fn test_store_and_retrieve() {
 
     let db = Database::new(db_path).unwrap();
 
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES (?, ?)", ["test", "/tmp"])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES (?, ?)",
+                ["test", "/tmp"],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
 
     let manager = MemoryManager::new(db);
 
@@ -37,7 +42,7 @@ async fn test_store_and_retrieve() {
         created_at: None,
         updated_at: None,
     };
-    
+
     manager.store_knowledge(&memory).unwrap();
 
     let results = manager.retrieve("Rust", workspace_id, 10).unwrap();
@@ -51,10 +56,15 @@ async fn test_hierarchical_retrieval() {
 
     let db = Database::new(db_path).unwrap();
 
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES (?, ?)", ["test", "/tmp"])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES (?, ?)",
+                ["test", "/tmp"],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
 
     let manager = MemoryManager::new(db);
 
@@ -76,7 +86,7 @@ async fn test_hierarchical_retrieval() {
         created_at: None,
         updated_at: None,
     };
-    
+
     manager.store_knowledge(&memory).unwrap();
 
     let episode = Episode {
@@ -94,7 +104,9 @@ async fn test_hierarchical_retrieval() {
     };
     manager.store_episode(episode).await.unwrap();
 
-    let results = manager.retrieve_hierarchical("programming", workspace_id, 10).unwrap();
+    let results = manager
+        .retrieve_hierarchical("programming", workspace_id, 10)
+        .unwrap();
     assert!(!results.is_empty());
 }
 
@@ -105,10 +117,15 @@ async fn test_memory_stats() {
 
     let db = Database::new(db_path).unwrap();
 
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES (?, ?)", ["test", "/tmp"])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES (?, ?)",
+                ["test", "/tmp"],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
 
     let manager = MemoryManager::new(db);
 

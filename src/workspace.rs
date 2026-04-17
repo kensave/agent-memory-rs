@@ -1,8 +1,8 @@
+use crate::{MemorySystem, ModelType};
 use anyhow::{anyhow, Result};
 use rusqlite::OptionalExtension;
-use std::path::{Path, PathBuf};
 use std::fs;
-use crate::{MemorySystem, ModelType};
+use std::path::{Path, PathBuf};
 
 pub struct WorkspaceManager {
     base_dir: PathBuf,
@@ -15,56 +15,68 @@ impl WorkspaceManager {
         let home = dirs::home_dir().ok_or_else(|| anyhow!("Cannot find home directory"))?;
         let base_dir = home.join(".memory-rs").join("workspaces");
         fs::create_dir_all(&base_dir)?;
-        
-        Ok(WorkspaceManager { base_dir, model_type })
+
+        Ok(WorkspaceManager {
+            base_dir,
+            model_type,
+        })
     }
 
     /// Create a new WorkspaceManager with custom base directory
     pub fn with_base_dir<P: AsRef<Path>>(base_dir: P, model_type: ModelType) -> Result<Self> {
         let base_dir = base_dir.as_ref().to_path_buf();
         fs::create_dir_all(&base_dir)?;
-        Ok(WorkspaceManager { base_dir, model_type })
+        Ok(WorkspaceManager {
+            base_dir,
+            model_type,
+        })
     }
 
     /// Get existing workspace or create new one with given name
     pub fn get_or_create_workspace(&self, workspace_name: &str) -> Result<MemorySystem> {
         let workspace_path = self.workspace_path(workspace_name);
         let db_path = workspace_path.join("memory.db");
-        
+
         fs::create_dir_all(&workspace_path)?;
-        
+
         let system = MemorySystem::new_lazy(&db_path, self.model_type)?;
-        
+
         // Ensure workspace entry exists
         let workspace_id: Option<i64> = system.database().execute(|conn| {
-            Ok(conn.query_row(
-                "SELECT id FROM workspaces WHERE name = ?1",
-                [workspace_name],
-                |row| row.get(0),
-            ).optional()?)
+            Ok(conn
+                .query_row(
+                    "SELECT id FROM workspaces WHERE name = ?1",
+                    [workspace_name],
+                    |row| row.get(0),
+                )
+                .optional()?)
         })?;
-        
+
         if workspace_id.is_none() {
             system.database().execute(|conn| {
                 conn.execute(
                     "INSERT INTO workspaces (name, path) VALUES (?1, ?2)",
-                    [workspace_name, workspace_path.to_str()
-                        .ok_or_else(|| anyhow!("Invalid workspace path"))?],
+                    [
+                        workspace_name,
+                        workspace_path
+                            .to_str()
+                            .ok_or_else(|| anyhow!("Invalid workspace path"))?,
+                    ],
                 )?;
                 Ok(())
             })?;
         }
-        
+
         Ok(system)
     }
 
     pub fn list_workspaces(&self) -> Result<Vec<String>> {
         let mut workspaces = Vec::new();
-        
+
         if !self.base_dir.exists() {
             return Ok(workspaces);
         }
-        
+
         for entry in fs::read_dir(&self.base_dir)? {
             let entry = entry?;
             if entry.file_type()?.is_dir() {
@@ -73,7 +85,7 @@ impl WorkspaceManager {
                 }
             }
         }
-        
+
         workspaces.sort();
         Ok(workspaces)
     }
@@ -118,9 +130,16 @@ mod tests {
         assert!(manager.workspace_exists("test-ws"));
 
         // Verify workspace entry in database
-        let count: i64 = system.database().execute(|conn| {
-            Ok(conn.query_row("SELECT COUNT(*) FROM workspaces WHERE name = 'test-ws'", [], |row| row.get(0))?)
-        }).unwrap();
+        let count: i64 = system
+            .database()
+            .execute(|conn| {
+                Ok(conn.query_row(
+                    "SELECT COUNT(*) FROM workspaces WHERE name = 'test-ws'",
+                    [],
+                    |row| row.get(0),
+                )?)
+            })
+            .unwrap();
         assert_eq!(count, 1);
 
         fs::remove_dir_all(base_dir).ok();
@@ -155,18 +174,32 @@ mod tests {
 
         let system1 = manager.get_or_create_workspace("ws1").unwrap();
         let system2 = manager.get_or_create_workspace("ws2").unwrap();
-        
+
         // Load models for testing
         system1.load_model().unwrap();
         system2.load_model().unwrap();
 
         // Get workspace IDs
-        let ws1_id: i64 = system1.database().execute(|conn| {
-            Ok(conn.query_row("SELECT id FROM workspaces WHERE name = 'ws1'", [], |row| row.get(0))?)
-        }).unwrap();
-        let ws2_id: i64 = system2.database().execute(|conn| {
-            Ok(conn.query_row("SELECT id FROM workspaces WHERE name = 'ws2'", [], |row| row.get(0))?)
-        }).unwrap();
+        let ws1_id: i64 = system1
+            .database()
+            .execute(|conn| {
+                Ok(
+                    conn.query_row("SELECT id FROM workspaces WHERE name = 'ws1'", [], |row| {
+                        row.get(0)
+                    })?,
+                )
+            })
+            .unwrap();
+        let ws2_id: i64 = system2
+            .database()
+            .execute(|conn| {
+                Ok(
+                    conn.query_row("SELECT id FROM workspaces WHERE name = 'ws2'", [], |row| {
+                        row.get(0)
+                    })?,
+                )
+            })
+            .unwrap();
 
         // Learn in workspace 1
         let memory1 = crate::storage::Memory {
@@ -211,14 +244,28 @@ mod tests {
         system2.learn(&memory2).unwrap();
 
         // Verify isolation - each workspace should only see its own memories
-        let count1: i64 = system1.database().execute(|conn| {
-            Ok(conn.query_row("SELECT COUNT(*) FROM memories WHERE workspace_id = ?1", [ws1_id], |row| row.get(0))?)
-        }).unwrap();
+        let count1: i64 = system1
+            .database()
+            .execute(|conn| {
+                Ok(conn.query_row(
+                    "SELECT COUNT(*) FROM memories WHERE workspace_id = ?1",
+                    [ws1_id],
+                    |row| row.get(0),
+                )?)
+            })
+            .unwrap();
         assert_eq!(count1, 1);
 
-        let count2: i64 = system2.database().execute(|conn| {
-            Ok(conn.query_row("SELECT COUNT(*) FROM memories WHERE workspace_id = ?1", [ws2_id], |row| row.get(0))?)
-        }).unwrap();
+        let count2: i64 = system2
+            .database()
+            .execute(|conn| {
+                Ok(conn.query_row(
+                    "SELECT COUNT(*) FROM memories WHERE workspace_id = ?1",
+                    [ws2_id],
+                    |row| row.get(0),
+                )?)
+            })
+            .unwrap();
         assert_eq!(count2, 1);
 
         fs::remove_dir_all(base_dir).ok();

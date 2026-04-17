@@ -10,10 +10,15 @@ fn test_bm25_search() {
 
     let db = Database::new(db_path).unwrap();
 
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES (?, ?)", ["test", "/tmp"])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES (?, ?)",
+                ["test", "/tmp"],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
 
     let store = MemoryStore::new(db.clone());
     let engine = HybridRetrievalEngine::new(db);
@@ -38,7 +43,9 @@ fn test_bm25_search() {
     };
     store.insert_memory(&memory).unwrap();
 
-    let results = engine.search_bm25("Rust programming", workspace_id, 10).unwrap();
+    let results = engine
+        .search_bm25("Rust programming", workspace_id, 10)
+        .unwrap();
     assert!(!results.is_empty());
     assert_eq!(results[0].memory_type, "semantic");
 }
@@ -50,10 +57,15 @@ fn test_hybrid_search() {
 
     let db = Database::new(db_path).unwrap();
 
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES (?, ?)", ["test", "/tmp"])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES (?, ?)",
+                ["test", "/tmp"],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
 
     let store = MemoryStore::new(db.clone());
     let engine = HybridRetrievalEngine::new(db);
@@ -91,10 +103,15 @@ fn test_search_by_type() {
 
     let db = Database::new(db_path).unwrap();
 
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES (?, ?)", ["test", "/tmp"])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES (?, ?)",
+                ["test", "/tmp"],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
 
     let store = MemoryStore::new(db.clone());
     let engine = HybridRetrievalEngine::new(db);
@@ -119,6 +136,8 @@ fn test_search_by_type() {
     };
     store.insert_memory(&memory).unwrap();
 
-    let results = engine.search_by_type("semantic", workspace_id, "semantic", 10).unwrap();
+    let results = engine
+        .search_by_type("semantic", workspace_id, "semantic", 10)
+        .unwrap();
     assert!(!results.is_empty());
 }

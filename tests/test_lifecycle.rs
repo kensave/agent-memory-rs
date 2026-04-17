@@ -10,10 +10,15 @@ async fn test_full_memory_lifecycle() {
     let _ = fs::remove_file(db_path);
 
     let db = Database::new(db_path).unwrap();
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES (?, ?)", ["test", "/tmp"])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES (?, ?)",
+                ["test", "/tmp"],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
 
     let manager = MemoryManager::new(db);
 
@@ -38,10 +43,13 @@ async fn test_full_memory_lifecycle() {
     // Step 2: Query memories (search for content that should match)
     let _results = manager.retrieve("step", workspace_id, 10).unwrap();
     // Note: Results may be empty if embeddings aren't loaded, but search should not error
-    
+
     // Step 3: Check stats (this should always work)
     let stats = manager.get_memory_stats(workspace_id).unwrap();
-    assert!(stats.active_episodes > 0, "Should have active episodes after storing 5 episodes");
+    assert!(
+        stats.active_episodes > 0,
+        "Should have active episodes after storing 5 episodes"
+    );
 }
 
 #[tokio::test]
@@ -50,10 +58,15 @@ async fn test_hierarchical_retrieval_integration() {
     let _ = fs::remove_file(db_path);
 
     let db = Database::new(db_path).unwrap();
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES (?, ?)", ["test", "/tmp"])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES (?, ?)",
+                ["test", "/tmp"],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
 
     let manager = MemoryManager::new(db);
 
@@ -95,9 +108,11 @@ async fn test_hierarchical_retrieval_integration() {
     manager.store_episode(episode).await.unwrap();
 
     // Test hierarchical retrieval
-    let results = manager.retrieve_hierarchical("programming", workspace_id, 10).unwrap();
+    let results = manager
+        .retrieve_hierarchical("programming", workspace_id, 10)
+        .unwrap();
     assert!(!results.is_empty());
-    
+
     // Should have both semantic and episodic results
     let has_semantic = results.iter().any(|r| r.memory_type == "semantic");
     let has_episodic = results.iter().any(|r| r.memory_type == "episodic");

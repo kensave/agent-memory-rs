@@ -1,6 +1,6 @@
+use crate::models::dtos::Episode;
 use crate::services::memory_manager::MemoryManager;
 use crate::storage::database::Database;
-use crate::models::dtos::Episode;
 use anyhow::Result;
 
 pub struct MemoryCLI {
@@ -31,7 +31,7 @@ impl MemoryCLI {
     pub fn list_workspaces(&self) -> Result<()> {
         println!("📋 Workspaces");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        
+
         let workspaces = self.db.execute(|conn| {
             let mut stmt = conn.prepare("SELECT id, name, path, created_at FROM workspaces")?;
             let rows = stmt.query_map([], |row| {
@@ -61,14 +61,17 @@ impl MemoryCLI {
 
     pub fn delete_workspace(&self, workspace_id: i64) -> Result<()> {
         println!("🗑️  Deleting workspace {}...", workspace_id);
-        
+
         let deleted = self.db.execute(|conn| {
             let rows = conn.execute("DELETE FROM workspaces WHERE id = ?1", [workspace_id])?;
             Ok(rows)
         })?;
-        
+
         if deleted > 0 {
-            println!("✅ Workspace {} deleted (CASCADE: memories, episodes, procedures)", workspace_id);
+            println!(
+                "✅ Workspace {} deleted (CASCADE: memories, episodes, procedures)",
+                workspace_id
+            );
         } else {
             println!("❌ Workspace {} not found", workspace_id);
         }
@@ -78,12 +81,12 @@ impl MemoryCLI {
     pub fn stats(&self, workspace_id: i64) -> Result<()> {
         println!("📊 Memory Statistics");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        
+
         let stats = self.manager.get_memory_stats(workspace_id)?;
         println!("  Active Episodes:   {}", stats.active_episodes);
         println!("  Archived Episodes: {}", stats.archived_episodes);
         println!("  Knowledge Items:   {}", stats.knowledge_count);
-        
+
         let total = stats.active_episodes + stats.archived_episodes;
         if total > 0 {
             let health = (stats.active_episodes as f64 / total as f64) * 100.0;
@@ -92,28 +95,38 @@ impl MemoryCLI {
         Ok(())
     }
 
-
     pub fn query(&self, workspace_id: i64, query: &str, limit: usize) -> Result<()> {
         println!("🔍 Searching for: \"{}\"", query);
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        
+
         let results = self.manager.retrieve(query, workspace_id, limit)?;
-        
+
         if results.is_empty() {
             println!("No results found.");
         } else {
             for (i, result) in results.iter().enumerate() {
-                println!("\n{}. [{}] Score: {:.3}", 
-                    i + 1, result.memory_type, result.score);
+                println!(
+                    "\n{}. [{}] Score: {:.3}",
+                    i + 1,
+                    result.memory_type,
+                    result.score
+                );
                 println!("   {}", result.content);
             }
         }
         Ok(())
     }
 
-    pub async fn store_episode(&self, workspace_id: i64, event_type: &str, context: &str, outcome: Option<&str>, valence: Option<f64>) -> Result<()> {
+    pub async fn store_episode(
+        &self,
+        workspace_id: i64,
+        event_type: &str,
+        context: &str,
+        outcome: Option<&str>,
+        valence: Option<f64>,
+    ) -> Result<()> {
         println!("💾 Storing episode...");
-        
+
         let episode = Episode {
             id: None,
             workspace_id,
@@ -127,9 +140,9 @@ impl MemoryCLI {
             archived: false,
             created_at: None,
         };
-        
+
         let episode_id = self.manager.store_episode(episode).await?;
-        
+
         println!("✅ Episode stored with ID: {}", episode_id);
         Ok(())
     }

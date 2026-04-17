@@ -13,7 +13,7 @@ impl ModelType {
             Self::BgeSmall => "BAAI/bge-small-en-v1.5",
         }
     }
-    
+
     pub fn dimensions(&self) -> usize {
         match self {
             Self::MiniLM => 384,

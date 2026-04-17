@@ -58,7 +58,7 @@ impl McpServer {
         loop {
             line.clear();
             let bytes_read = reader.read_line(&mut line).await?;
-            
+
             if bytes_read == 0 {
                 debug!("EOF reached, shutting down");
                 break;
@@ -113,7 +113,7 @@ impl McpServer {
 
             let response_json = serde_json::to_string(&response)?;
             debug!("Sending response: {}", response_json);
-            
+
             stdout.write_all(response_json.as_bytes()).await?;
             stdout.write_all(b"\n").await?;
             stdout.flush().await?;
@@ -127,7 +127,10 @@ impl McpServer {
     where
         H: FnMut(JsonRpcRequest) -> Result<Value>,
     {
-        info!("Starting MCP server (sync): {} v{}", self.name, self.version);
+        info!(
+            "Starting MCP server (sync): {} v{}",
+            self.name, self.version
+        );
 
         let stdin = std::io::stdin();
         let mut stdout = std::io::stdout();
@@ -136,7 +139,7 @@ impl McpServer {
         for line in reader.lines() {
             let line = line?;
             let trimmed = line.trim();
-            
+
             if trimmed.is_empty() {
                 continue;
             }
@@ -185,7 +188,7 @@ impl McpServer {
 
             let response_json = serde_json::to_string(&response)?;
             debug!("Sending response: {}", response_json);
-            
+
             writeln!(stdout, "{}", response_json)?;
             stdout.flush()?;
         }
@@ -203,7 +206,7 @@ mod tests {
     fn test_jsonrpc_request_parsing() {
         let json = r#"{"jsonrpc":"2.0","id":1,"method":"test","params":{"key":"value"}}"#;
         let request: JsonRpcRequest = serde_json::from_str(json).unwrap();
-        
+
         assert_eq!(request.jsonrpc, "2.0");
         assert_eq!(request.method, "test");
         assert!(request.params.is_some());
@@ -217,7 +220,7 @@ mod tests {
             result: Some(serde_json::json!({"status": "ok"})),
             error: None,
         };
-        
+
         let json = serde_json::to_string(&response).unwrap();
         assert!(json.contains("\"result\""));
         assert!(!json.contains("\"error\""));
@@ -235,7 +238,7 @@ mod tests {
                 data: None,
             }),
         };
-        
+
         let json = serde_json::to_string(&response).unwrap();
         assert!(json.contains("\"error\""));
         assert!(!json.contains("\"result\""));

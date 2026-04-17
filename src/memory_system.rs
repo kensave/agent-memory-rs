@@ -1,6 +1,6 @@
-use anyhow::Result;
+use crate::storage::{Database, Memory, MemoryStore, SearchFilters, SearchResult};
 use crate::{FastEmbedder, ModelType};
-use crate::storage::{Database, MemoryStore, Memory, SearchFilters, SearchResult};
+use anyhow::Result;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
@@ -16,7 +16,10 @@ impl MemorySystem {
         let db = Database::new(db_path)?;
         let mut embedder = FastEmbedder::with_model(model_type)?;
         embedder.load_model_sync()?;
-        Ok(MemorySystem { db, embedder: Arc::new(Mutex::new(embedder)) })
+        Ok(MemorySystem {
+            db,
+            embedder: Arc::new(Mutex::new(embedder)),
+        })
     }
 
     /// Create a new MemorySystem without loading the model.
@@ -25,12 +28,16 @@ impl MemorySystem {
     pub fn new_lazy<P: AsRef<Path>>(db_path: P, model_type: ModelType) -> Result<Self> {
         let db = Database::new(db_path)?;
         let embedder = FastEmbedder::with_model(model_type)?;
-        Ok(MemorySystem { db, embedder: Arc::new(Mutex::new(embedder)) })
+        Ok(MemorySystem {
+            db,
+            embedder: Arc::new(Mutex::new(embedder)),
+        })
     }
 
     /// Load the embedding model. Only needed if created with `new_lazy()`.
     pub fn load_model(&self) -> Result<()> {
-        self.embedder.lock()
+        self.embedder
+            .lock()
             .map_err(|_| anyhow::anyhow!("Failed to acquire embedder lock"))?
             .load_model_sync()
     }
@@ -38,57 +45,68 @@ impl MemorySystem {
     pub fn database(&self) -> &Database {
         &self.db
     }
-    
+
     pub fn embedder(&self) -> Arc<Mutex<FastEmbedder>> {
         self.embedder.clone()
     }
 
     pub fn learn(&self, memory: &Memory) -> Result<i64> {
         let store = MemoryStore::new(self.db.clone());
-        
+
         // Generate embedding
-        let embedding = self.embedder.lock()
+        let embedding = self
+            .embedder
+            .lock()
             .map_err(|_| anyhow::anyhow!("Failed to acquire embedder lock"))?
             .embed(&memory.text)?;
-        
+
         // Store memory and embedding atomically
         let memory_id = store.insert_memory(memory)?;
         store.insert_embedding(memory_id, &embedding)?;
-        
+
         Ok(memory_id)
     }
 
     pub fn learn_batch(&self, memories: &[Memory]) -> Result<Vec<i64>> {
         let store = MemoryStore::new(self.db.clone());
         let mut memory_ids = Vec::new();
-        
+
         // Collect texts for batch embedding
         let texts: Vec<&str> = memories.iter().map(|m| m.text.as_str()).collect();
-        let embeddings = self.embedder.lock()
+        let embeddings = self
+            .embedder
+            .lock()
             .map_err(|_| anyhow::anyhow!("Failed to acquire embedder lock"))?
             .embed_batch(&texts)?;
-        
+
         // Store all memories and embeddings
         for (memory, embedding) in memories.iter().zip(embeddings.iter()) {
             let memory_id = store.insert_memory(memory)?;
             store.insert_embedding(memory_id, embedding)?;
             memory_ids.push(memory_id);
         }
-        
+
         Ok(memory_ids)
     }
 
-    pub fn search(&self, query: &str, filters: &SearchFilters, limit: usize) -> Result<Vec<SearchResult>> {
+    pub fn search(
+        &self,
+        query: &str,
+        filters: &SearchFilters,
+        limit: usize,
+    ) -> Result<Vec<SearchResult>> {
         let store = MemoryStore::new(self.db.clone());
-        
+
         // Generate query embedding
-        let query_embedding = self.embedder.lock()
+        let query_embedding = self
+            .embedder
+            .lock()
             .map_err(|_| anyhow::anyhow!("Failed to acquire embedder lock"))?
             .embed(query)?;
-        
+
         // Search with filters
         let results = store.search_similar(&query_embedding, filters, limit)?;
-        
+
         Ok(results)
     }
 
@@ -121,14 +139,20 @@ mod tests {
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
 
         // Create workspace
-        system.db.execute(|conn| {
-            conn.execute(
-                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
-                [],
-            )?;
-            Ok(conn.last_insert_rowid())
-        }).unwrap();
-        let workspace_id = system.db.execute(|conn| Ok(conn.last_insert_rowid())).unwrap();
+        system
+            .db
+            .execute(|conn| {
+                conn.execute(
+                    "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                    [],
+                )?;
+                Ok(conn.last_insert_rowid())
+            })
+            .unwrap();
+        let workspace_id = system
+            .db
+            .execute(|conn| Ok(conn.last_insert_rowid()))
+            .unwrap();
 
         // Learn some facts
         let facts = vec![
@@ -150,10 +174,10 @@ mod tests {
                 conversation_id: None,
                 parent_memory_id: None,
                 user_feedback: None,
-            source_episodes: vec![],
-            confidence: 0.5,
-            last_validated: None,
-            created_at: None,
+                source_episodes: vec![],
+                confidence: 0.5,
+                last_validated: None,
+                created_at: None,
                 updated_at: None,
             };
             system.learn(&memory).unwrap();
@@ -167,7 +191,10 @@ mod tests {
         let results = system.search("programming language", &filters, 2).unwrap();
 
         assert_eq!(results.len(), 2);
-        assert!(results[0].memory.text.contains("Rust") || results[0].memory.text.contains("JavaScript"));
+        assert!(
+            results[0].memory.text.contains("Rust")
+                || results[0].memory.text.contains("JavaScript")
+        );
 
         fs::remove_file(db_path).ok();
     }
@@ -179,32 +206,37 @@ mod tests {
 
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
 
-        let workspace_id = system.db.execute(|conn| {
-            conn.execute(
-                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
-                [],
-            )?;
-            Ok(conn.last_insert_rowid())
-        }).unwrap();
+        let workspace_id = system
+            .db
+            .execute(|conn| {
+                conn.execute(
+                    "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                    [],
+                )?;
+                Ok(conn.last_insert_rowid())
+            })
+            .unwrap();
 
-        let memories: Vec<Memory> = (0..5).map(|i| Memory {
-            id: None,
-            workspace_id,
-            agent_id: None,
-            text: format!("Fact number {}", i),
-            tags: None,
-            importance_score: 0.5,
-            access_count: 0,
-            last_accessed: None,
-            conversation_id: None,
-            parent_memory_id: None,
-            user_feedback: None,
-            source_episodes: vec![],
-            confidence: 0.5,
-            last_validated: None,
-            created_at: None,
-            updated_at: None,
-        }).collect();
+        let memories: Vec<Memory> = (0..5)
+            .map(|i| Memory {
+                id: None,
+                workspace_id,
+                agent_id: None,
+                text: format!("Fact number {}", i),
+                tags: None,
+                importance_score: 0.5,
+                access_count: 0,
+                last_accessed: None,
+                conversation_id: None,
+                parent_memory_id: None,
+                user_feedback: None,
+                source_episodes: vec![],
+                confidence: 0.5,
+                last_validated: None,
+                created_at: None,
+                updated_at: None,
+            })
+            .collect();
 
         let memory_ids = system.learn_batch(&memories).unwrap();
         assert_eq!(memory_ids.len(), 5);
@@ -225,13 +257,16 @@ mod tests {
 
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
 
-        let workspace_id = system.db.execute(|conn| {
-            conn.execute(
-                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
-                [],
-            )?;
-            Ok(conn.last_insert_rowid())
-        }).unwrap();
+        let workspace_id = system
+            .db
+            .execute(|conn| {
+                conn.execute(
+                    "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                    [],
+                )?;
+                Ok(conn.last_insert_rowid())
+            })
+            .unwrap();
 
         // Learn memories with different importance scores
         for i in 0..5 {
@@ -247,10 +282,10 @@ mod tests {
                 conversation_id: None,
                 parent_memory_id: None,
                 user_feedback: None,
-            source_episodes: vec![],
-            confidence: 0.5,
-            last_validated: None,
-            created_at: None,
+                source_episodes: vec![],
+                confidence: 0.5,
+                last_validated: None,
+                created_at: None,
                 updated_at: None,
             };
             system.learn(&memory).unwrap();
@@ -279,13 +314,16 @@ mod tests {
 
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
 
-        let workspace_id = system.db.execute(|conn| {
-            conn.execute(
-                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
-                [],
-            )?;
-            Ok(conn.last_insert_rowid())
-        }).unwrap();
+        let workspace_id = system
+            .db
+            .execute(|conn| {
+                conn.execute(
+                    "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                    [],
+                )?;
+                Ok(conn.last_insert_rowid())
+            })
+            .unwrap();
 
         // Empty text should still work (mock embedder handles it)
         let memory = Memory {
@@ -306,7 +344,7 @@ mod tests {
             created_at: None,
             updated_at: None,
         };
-        
+
         let result = system.learn(&memory);
         assert!(result.is_ok());
 

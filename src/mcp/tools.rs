@@ -1,9 +1,9 @@
+use crate::memory_system::MemorySystem;
+use crate::storage::{Memory, SearchFilters};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::{Arc, Mutex};
-use crate::memory_system::MemorySystem;
-use crate::storage::{Memory, SearchFilters};
 
 #[derive(Debug, Deserialize)]
 pub struct LearnRequest {
@@ -127,11 +127,12 @@ impl MemoryTools {
             })),
             "tools/call" => {
                 let params = params.ok_or_else(|| anyhow!("Missing params"))?;
-                let tool_name = params.get("name")
+                let tool_name = params
+                    .get("name")
                     .and_then(|v| v.as_str())
                     .ok_or_else(|| anyhow!("Missing tool name"))?;
                 let arguments = params.get("arguments");
-                
+
                 match tool_name {
                     "learn" => self.handle_learn(arguments.cloned()),
                     "search" => self.handle_search(arguments.cloned()),
@@ -169,11 +170,13 @@ impl MemoryTools {
             source_episodes: vec![],
             confidence: 0.5,
             last_validated: None,
-            created_at,  // Auto-generated timestamp
+            created_at, // Auto-generated timestamp
             updated_at: None,
         };
 
-        let system = self.memory_system.lock()
+        let system = self
+            .memory_system
+            .lock()
             .map_err(|_| anyhow!("Failed to acquire memory system lock"))?;
         let memory_id = system.learn(&memory)?;
 
@@ -209,22 +212,30 @@ impl MemoryTools {
             conversation_id: request.conversation_id,
         };
 
-        let system = self.memory_system.lock()
+        let system = self
+            .memory_system
+            .lock()
             .map_err(|_| anyhow!("Failed to acquire memory system lock"))?;
         let results = system.search(&request.query, &filters, request.limit)?;
 
-        let items: Vec<SearchResultItem> = results.into_iter().map(|r| SearchResultItem {
-            memory_id: r.memory.id.unwrap_or(0),
-            text: r.memory.text,
-            similarity_score: r.similarity_score,
-            combined_score: r.combined_score,
-            importance_score: r.memory.importance_score,
-            tags: r.memory.tags,
-            created_at: r.memory.created_at,
-        }).collect();
+        let items: Vec<SearchResultItem> = results
+            .into_iter()
+            .map(|r| SearchResultItem {
+                memory_id: r.memory.id.unwrap_or(0),
+                text: r.memory.text,
+                similarity_score: r.similarity_score,
+                combined_score: r.combined_score,
+                importance_score: r.memory.importance_score,
+                tags: r.memory.tags,
+                created_at: r.memory.created_at,
+            })
+            .collect();
 
         let count = items.len();
-        let response = SearchResponse { results: items, count };
+        let response = SearchResponse {
+            results: items,
+            count,
+        };
 
         Ok(serde_json::to_value(response)?)
     }
@@ -242,12 +253,18 @@ mod tests {
         let _ = fs::remove_file(db_path);
 
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
-        
+
         // Create workspace
-        let workspace_id = system.database().execute(|conn| {
-            conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
-            Ok(conn.last_insert_rowid())
-        }).unwrap();
+        let workspace_id = system
+            .database()
+            .execute(|conn| {
+                conn.execute(
+                    "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                    [],
+                )?;
+                Ok(conn.last_insert_rowid())
+            })
+            .unwrap();
 
         let tools = MemoryTools::new(system);
 
@@ -272,11 +289,17 @@ mod tests {
         let _ = fs::remove_file(db_path);
 
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
-        
-        let workspace_id = system.database().execute(|conn| {
-            conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
-            Ok(conn.last_insert_rowid())
-        }).unwrap();
+
+        let workspace_id = system
+            .database()
+            .execute(|conn| {
+                conn.execute(
+                    "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                    [],
+                )?;
+                Ok(conn.last_insert_rowid())
+            })
+            .unwrap();
 
         let tools = MemoryTools::new(system);
 
@@ -360,7 +383,9 @@ mod tests {
 
         assert_eq!(tools_list.len(), 2);
         assert!(tools_list.iter().any(|t| t.get("name").unwrap() == "learn"));
-        assert!(tools_list.iter().any(|t| t.get("name").unwrap() == "search"));
+        assert!(tools_list
+            .iter()
+            .any(|t| t.get("name").unwrap() == "search"));
 
         fs::remove_file(db_path).ok();
     }
@@ -371,11 +396,17 @@ mod tests {
         let _ = fs::remove_file(db_path);
 
         let system = MemorySystem::new(db_path, ModelType::MiniLM).unwrap();
-        
-        let workspace_id = system.database().execute(|conn| {
-            conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')", [])?;
-            Ok(conn.last_insert_rowid())
-        }).unwrap();
+
+        let workspace_id = system
+            .database()
+            .execute(|conn| {
+                conn.execute(
+                    "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp/test')",
+                    [],
+                )?;
+                Ok(conn.last_insert_rowid())
+            })
+            .unwrap();
 
         let tools = MemoryTools::new(system);
 
