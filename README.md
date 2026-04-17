@@ -22,7 +22,7 @@ Agent Memory RS stores interaction episodes with vector embeddings and retrieves
 - **Episode Storage** — Events stored with vector embeddings (BGE-Small, 384 dims)
 - **Vector Search** — Cosine distance retrieval on episode embeddings
 - **BM25 Search** — Keyword search with proper IDF calculation
-- **MCP Server** — Learn and search tools via Model Context Protocol (stdio)
+- **MCP Server** — Learn and search tools via Model Context Protocol (stdio + HTTP)
 - **Workspace Isolation** — Separate SQLite databases per workspace (`~/.memory-rs/workspaces/`)
 - **Multiple Models** — BGE-Small (default), Nomic (long context), MiniLM (fastest)
 
@@ -94,6 +94,42 @@ cargo build --release
 **Available MCP Tools:**
 - `@memory/learn` - Store new memories
 - `@memory/search` - Search across all memory types
+
+### Remote Access (HTTP)
+
+Run the MCP server as a standalone HTTP service to share memory across devices on your network:
+
+```bash
+# Start HTTP server
+./target/release/agent-memory-mcp --http 0.0.0.0:8230 my-workspace
+```
+
+Any MCP client that supports HTTP transport can connect directly:
+
+```json
+{
+  "mcpServers": {
+    "agent-memory": {
+      "url": "http://server-ip:8230/mcp"
+    }
+  }
+}
+```
+
+This is useful when you want a single memory database shared across multiple machines — run the server on one device (e.g. a Raspberry Pi or home server) and connect from anywhere on your network.
+
+For environments without native HTTP MCP support, a `agent-memory-proxy` binary is included that bridges stdio ↔ HTTP:
+
+```json
+{
+  "mcpServers": {
+    "agent-memory": {
+      "command": "/path/to/agent-memory-proxy",
+      "args": ["--remote", "http://server-ip:8230/mcp"]
+    }
+  }
+}
+```
 
 ## Data Storage
 
