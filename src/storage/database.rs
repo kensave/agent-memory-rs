@@ -1,6 +1,6 @@
 use anyhow::Result;
-use rusqlite::Connection;
 use rusqlite::ffi::sqlite3_auto_extension;
+use rusqlite::Connection;
 use sqlite_vec::sqlite3_vec_init;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -18,12 +18,12 @@ impl Database {
         unsafe {
             sqlite3_auto_extension(Some(std::mem::transmute(sqlite3_vec_init as *const ())));
         }
-        
+
         let conn = Connection::open(path)?;
         let db = Database {
             conn: Arc::new(Mutex::new(conn)),
         };
-        
+
         db.initialize()?;
         Ok(db)
     }
@@ -33,7 +33,9 @@ impl Database {
     where
         F: FnOnce(&Connection) -> Result<T>,
     {
-        let conn = self.conn.lock()
+        let conn = self
+            .conn
+            .lock()
             .map_err(|_| anyhow::anyhow!("Failed to acquire database connection lock"))?;
         f(&conn)
     }
@@ -45,11 +47,11 @@ impl Database {
                 "CREATE TABLE IF NOT EXISTS schema_version (
                     version INTEGER PRIMARY KEY,
                     applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                )"
+                )",
             )?;
             Ok(())
         })?;
-        
+
         self.create_schema()?;
         self.apply_migrations()?;
         Ok(())
@@ -213,15 +215,19 @@ impl Database {
                 )
                 .unwrap_or(0);
 
+            if current_version < 1 {
+                conn.execute("INSERT INTO schema_version (version) VALUES (?1)", [1])?;
+            }
+
             // Migration 2: Add access tracking to episodes
             if current_version < 2 {
-                // Use pragma to check if columns exist (safe for re-runs)
-                let has_col: bool = conn.prepare("SELECT access_count FROM episodes LIMIT 0")
+                let has_col: bool = conn
+                    .prepare("SELECT access_count FROM episodes LIMIT 0")
                     .is_ok();
                 if !has_col {
                     conn.execute_batch(
                         "ALTER TABLE episodes ADD COLUMN access_count INTEGER DEFAULT 0;
-                         ALTER TABLE episodes ADD COLUMN last_accessed TEXT;"
+                         ALTER TABLE episodes ADD COLUMN last_accessed TEXT;",
                     )?;
                 }
                 conn.execute("INSERT INTO schema_version (version) VALUES (2)", [])?;

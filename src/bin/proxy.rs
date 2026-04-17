@@ -11,7 +11,10 @@ use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
-#[command(name = "agent-memory-proxy", about = "Stdio-to-HTTP proxy for remote Memory MCP server")]
+#[command(
+    name = "agent-memory-proxy",
+    about = "Stdio-to-HTTP proxy for remote Memory MCP server"
+)]
 struct Args {
     /// Remote server URL (e.g. http://192.168.1.100:8230/mcp)
     #[arg(long)]
@@ -49,7 +52,11 @@ impl ServerHandler for ProxyServer {
         _context: RequestContext<RoleServer>,
     ) -> Result<ListToolsResult, ErrorData> {
         self.client.list_tools(request).await.map_err(|e| {
-            ErrorData::new(ErrorCode::INTERNAL_ERROR, format!("Remote error: {}", e), None)
+            ErrorData::new(
+                ErrorCode::INTERNAL_ERROR,
+                format!("Remote error: {}", e),
+                None,
+            )
         })
     }
 
@@ -59,7 +66,11 @@ impl ServerHandler for ProxyServer {
         _context: RequestContext<RoleServer>,
     ) -> Result<CallToolResult, ErrorData> {
         self.client.call_tool(request).await.map_err(|e| {
-            ErrorData::new(ErrorCode::INTERNAL_ERROR, format!("Remote error: {}", e), None)
+            ErrorData::new(
+                ErrorCode::INTERNAL_ERROR,
+                format!("Remote error: {}", e),
+                None,
+            )
         })
     }
 }

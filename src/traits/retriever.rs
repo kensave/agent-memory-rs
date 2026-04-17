@@ -11,10 +11,16 @@ pub trait MemoryRetriever: Send + Sync {
     type Result;
 
     /// Search memories by query
-    async fn search(&self, query: Self::Query, filters: Self::Filters) -> Result<Vec<Self::Result>>;
+    async fn search(&self, query: Self::Query, filters: Self::Filters)
+        -> Result<Vec<Self::Result>>;
 
     /// Get memories by time range
-    async fn get_by_time_range(&self, start: String, end: String, filters: Self::Filters) -> Result<Vec<Self::Memory>>;
+    async fn get_by_time_range(
+        &self,
+        start: String,
+        end: String,
+        filters: Self::Filters,
+    ) -> Result<Vec<Self::Memory>>;
 
     /// Get memories by conversation
     async fn get_by_conversation(&self, conversation_id: String) -> Result<Vec<Self::Memory>>;

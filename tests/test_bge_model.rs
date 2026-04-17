@@ -1,5 +1,5 @@
-use agent_memory_rs::{MemorySystem, ModelType};
 use agent_memory_rs::storage::memory_store::Memory;
+use agent_memory_rs::{MemorySystem, ModelType};
 use std::fs;
 
 #[test]
@@ -11,16 +11,31 @@ fn test_bge_small_semantic_search() {
     let system = MemorySystem::new(db_path, ModelType::BgeSmall).unwrap();
 
     // Create workspace
-    system.database().execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES ('test', '/tmp')", [])?;
-        Ok(())
-    }).unwrap();
+    system
+        .database()
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES ('test', '/tmp')",
+                [],
+            )?;
+            Ok(())
+        })
+        .unwrap();
 
     // Store diverse memories
     let memories = vec![
-        ("I enjoy hiking in the mountains on weekends", "outdoor, hobbies"),
-        ("Python is great for data science and machine learning", "programming, tech"),
-        ("The sunset was beautiful yesterday evening", "nature, observation"),
+        (
+            "I enjoy hiking in the mountains on weekends",
+            "outdoor, hobbies",
+        ),
+        (
+            "Python is great for data science and machine learning",
+            "programming, tech",
+        ),
+        (
+            "The sunset was beautiful yesterday evening",
+            "nature, observation",
+        ),
     ];
 
     for (text, tags) in memories {
@@ -46,12 +61,19 @@ fn test_bge_small_semantic_search() {
     }
 
     // Test semantic search
-    let results = system.search("outdoor activities and nature", &Default::default(), 5).unwrap();
+    let results = system
+        .search("outdoor activities and nature", &Default::default(), 5)
+        .unwrap();
     assert!(!results.is_empty(), "Should find results");
 
     println!("\nBGE-Small Search Results for 'outdoor activities and nature':");
     for (i, result) in results.iter().enumerate() {
-        println!("  {}. [score={:.3}] {}", i+1, result.similarity_score, result.memory.text);
+        println!(
+            "  {}. [score={:.3}] {}",
+            i + 1,
+            result.similarity_score,
+            result.memory.text
+        );
     }
 
     // Hiking should rank higher than Python for "outdoor activities"
@@ -69,8 +91,16 @@ fn test_bge_small_semantic_search() {
 
     // Verify scores are not all 1.0 (real embeddings)
     let top_score = results[0].similarity_score;
-    assert!(top_score < 1.0, "Should not have perfect similarity (got {:.3})", top_score);
-    assert!(top_score > 0.0, "Should have positive similarity (got {:.3})", top_score);
+    assert!(
+        top_score < 1.0,
+        "Should not have perfect similarity (got {:.3})",
+        top_score
+    );
+    assert!(
+        top_score > 0.0,
+        "Should have positive similarity (got {:.3})",
+        top_score
+    );
 
     println!("\n✅ BGE-Small semantic search working correctly!");
 }

@@ -25,7 +25,7 @@ impl MemoryManager {
             db,
         }
     }
-    
+
     /// Create a new MemoryManager with custom embedder
     pub fn with_embedder(db: Database, embedder: Arc<Mutex<FastEmbedder>>) -> Self {
         Self {
@@ -44,21 +44,35 @@ impl MemoryManager {
         self.semantic.insert_memory(memory)
     }
 
-    pub fn retrieve(&self, query: &str, workspace_id: i64, limit: usize) -> Result<Vec<HybridSearchResult>> {
+    pub fn retrieve(
+        &self,
+        query: &str,
+        workspace_id: i64,
+        limit: usize,
+    ) -> Result<Vec<HybridSearchResult>> {
         self.retrieval.hybrid_search(query, workspace_id, limit)
     }
 
-    pub fn retrieve_hierarchical(&self, query: &str, workspace_id: i64, max_results: usize) -> Result<Vec<HybridSearchResult>> {
+    pub fn retrieve_hierarchical(
+        &self,
+        query: &str,
+        workspace_id: i64,
+        max_results: usize,
+    ) -> Result<Vec<HybridSearchResult>> {
         let mut results = Vec::new();
-        
+
         // Level 1: Semantic memory (BM25 + vector hybrid)
-        let semantic = self.retrieval.hybrid_search(query, workspace_id, max_results)?;
+        let semantic = self
+            .retrieval
+            .hybrid_search(query, workspace_id, max_results)?;
         results.extend(semantic);
-        
+
         // Level 2: Recent episodes (vector search)
-        let episodic = self.retrieval.search_by_type(query, workspace_id, "episodic", max_results)?;
+        let episodic =
+            self.retrieval
+                .search_by_type(query, workspace_id, "episodic", max_results)?;
         results.extend(episodic);
-        
+
         // Sort by score and return top N
         results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
         results.truncate(max_results);
@@ -83,21 +97,21 @@ impl MemoryManager {
             let episodes: i64 = conn.query_row(
                 "SELECT COUNT(*) FROM episodes WHERE workspace_id = ? AND archived = 0",
                 rusqlite::params![workspace_id],
-                |row| row.get(0)
+                |row| row.get(0),
             )?;
-            
+
             let archived: i64 = conn.query_row(
                 "SELECT COUNT(*) FROM episodes WHERE workspace_id = ? AND archived = 1",
                 rusqlite::params![workspace_id],
-                |row| row.get(0)
+                |row| row.get(0),
             )?;
-            
+
             let knowledge: i64 = conn.query_row(
                 "SELECT COUNT(*) FROM memories WHERE workspace_id = ?",
                 rusqlite::params![workspace_id],
-                |row| row.get(0)
+                |row| row.get(0),
             )?;
-            
+
             Ok(MemoryStats {
                 active_episodes: episodes as usize,
                 archived_episodes: archived as usize,

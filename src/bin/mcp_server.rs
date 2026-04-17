@@ -1,7 +1,9 @@
-use anyhow::Result;
 use agent_memory_rs::mcp::MemoryMcpServer;
+use anyhow::Result;
 use clap::Parser;
-use rmcp::transport::streamable_http_server::{StreamableHttpService, session::local::LocalSessionManager};
+use rmcp::transport::streamable_http_server::{
+    session::local::LocalSessionManager, StreamableHttpService,
+};
 use rmcp::{transport::stdio, ServiceExt};
 use tracing_subscriber::EnvFilter;
 
@@ -24,7 +26,8 @@ fn resolve_workspace(name: Option<String>) -> String {
             let mut hasher = DefaultHasher::new();
             p.to_string_lossy().hash(&mut hasher);
             let hash = hasher.finish();
-            let dir_name = p.file_name()
+            let dir_name = p
+                .file_name()
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_else(|| "root".to_string());
             format!("{:08x}-{}", hash, dir_name)
@@ -62,9 +65,10 @@ async fn main() -> Result<()> {
     if let Some(bind_addr) = args.http {
         // Standalone HTTP server mode
         let service = StreamableHttpService::new(
-            move || MemoryMcpServer::new(&workspace_name, model_type).map_err(|e| {
-                std::io::Error::new(std::io::ErrorKind::Other, format!("{}", e))
-            }),
+            move || {
+                MemoryMcpServer::new(&workspace_name, model_type)
+                    .map_err(|e| std::io::Error::other(format!("{}", e)))
+            },
             LocalSessionManager::default().into(),
             Default::default(),
         );

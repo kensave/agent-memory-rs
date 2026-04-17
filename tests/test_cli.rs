@@ -11,10 +11,15 @@ async fn test_cli_stats() {
     let _ = fs::remove_file(db_path);
 
     let db = Database::new(db_path).unwrap();
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES (?, ?)", ["test", "/tmp"])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES (?, ?)",
+                ["test", "/tmp"],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
 
     let manager = MemoryManager::new(db);
     let episode = Episode {
@@ -43,10 +48,15 @@ async fn test_cli_query() {
     let _ = fs::remove_file(db_path);
 
     let db = Database::new(db_path).unwrap();
-    let workspace_id = db.execute(|conn| {
-        conn.execute("INSERT INTO workspaces (name, path) VALUES (?, ?)", ["test", "/tmp"])?;
-        Ok(conn.last_insert_rowid())
-    }).unwrap();
+    let workspace_id = db
+        .execute(|conn| {
+            conn.execute(
+                "INSERT INTO workspaces (name, path) VALUES (?, ?)",
+                ["test", "/tmp"],
+            )?;
+            Ok(conn.last_insert_rowid())
+        })
+        .unwrap();
 
     let manager = MemoryManager::new(db);
     let memory = agent_memory_rs::storage::memory_store::Memory {

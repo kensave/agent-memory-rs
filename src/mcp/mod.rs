@@ -1,7 +1,7 @@
+pub mod rmcp_server;
 pub mod server;
 pub mod tools;
-pub mod rmcp_server;
 
-pub use server::{McpServer, JsonRpcRequest, JsonRpcResponse, JsonRpcError};
-pub use tools::{MemoryTools, LearnRequest, LearnResponse, SearchRequest, SearchResponse};
 pub use rmcp_server::MemoryMcpServer;
+pub use server::{JsonRpcError, JsonRpcRequest, JsonRpcResponse, McpServer};
+pub use tools::{LearnRequest, LearnResponse, MemoryTools, SearchRequest, SearchResponse};

@@ -1,15 +1,19 @@
+use super::Database;
 use anyhow::Result;
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
-use super::Database;
 
 // Helper function to generate current timestamp
 pub fn now_timestamp() -> String {
     chrono::Utc::now().to_rfc3339()
 }
 
-fn is_zero(n: &i64) -> bool { *n == 0 }
-fn is_empty_vec(v: &[i64]) -> bool { v.is_empty() }
+fn is_zero(n: &i64) -> bool {
+    *n == 0
+}
+fn is_empty_vec(v: &[i64]) -> bool {
+    v.is_empty()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Memory {
@@ -97,10 +101,8 @@ impl MemoryStore {
 
     pub fn insert_embedding(&self, memory_id: i64, embedding: &[f32]) -> Result<()> {
         self.db.execute(|conn| {
-            let bytes: Vec<u8> = embedding.iter()
-                .flat_map(|f| f.to_le_bytes())
-                .collect();
-            
+            let bytes: Vec<u8> = embedding.iter().flat_map(|f| f.to_le_bytes()).collect();
+
             conn.execute(
                 "INSERT INTO vec0 (memory_id, embedding) VALUES (?1, vec_f32(?2))",
                 params![memory_id, bytes],
@@ -118,28 +120,31 @@ impl MemoryStore {
                  FROM memories WHERE id = ?1",
             )?;
 
-            let memory = stmt.query_row(params![memory_id], |row| {
-                Ok(Memory {
-                    id: Some(row.get(0)?),
-                    workspace_id: row.get(1)?,
-                    agent_id: row.get(2)?,
-                    text: row.get(3)?,
-                    tags: row.get(4)?,
-                    importance_score: row.get(5)?,
-                    access_count: row.get(6)?,
-                    last_accessed: row.get(7)?,
-                    conversation_id: row.get(8)?,
-                    parent_memory_id: row.get(9)?,
-                    user_feedback: row.get(10)?,
-                    source_episodes: row.get::<_, Option<String>>(11)?
-                        .and_then(|s| serde_json::from_str(&s).ok())
-                        .unwrap_or_default(),
-                    confidence: row.get::<_, Option<f64>>(12)?.unwrap_or(0.5),
-                    last_validated: row.get(13)?,
-                    created_at: row.get(14)?,
-                    updated_at: Some(row.get(15)?),
+            let memory = stmt
+                .query_row(params![memory_id], |row| {
+                    Ok(Memory {
+                        id: Some(row.get(0)?),
+                        workspace_id: row.get(1)?,
+                        agent_id: row.get(2)?,
+                        text: row.get(3)?,
+                        tags: row.get(4)?,
+                        importance_score: row.get(5)?,
+                        access_count: row.get(6)?,
+                        last_accessed: row.get(7)?,
+                        conversation_id: row.get(8)?,
+                        parent_memory_id: row.get(9)?,
+                        user_feedback: row.get(10)?,
+                        source_episodes: row
+                            .get::<_, Option<String>>(11)?
+                            .and_then(|s| serde_json::from_str(&s).ok())
+                            .unwrap_or_default(),
+                        confidence: row.get::<_, Option<f64>>(12)?.unwrap_or(0.5),
+                        last_validated: row.get(13)?,
+                        created_at: row.get(14)?,
+                        updated_at: Some(row.get(15)?),
+                    })
                 })
-            }).optional()?;
+                .optional()?;
 
             Ok(memory)
         })
@@ -286,7 +291,7 @@ impl MemoryStore {
                  SET source_episodes = json_insert(source_episodes, '$[#]', ?),
                      updated_at = datetime('now')
                  WHERE id = ?",
-                params![episode_id, memory_id]
+                params![episode_id, memory_id],
             )?;
             Ok(())
         })
@@ -303,7 +308,7 @@ impl MemoryStore {
                  END,
                  updated_at = datetime('now')
                  WHERE id = ?",
-                params![delta, delta, delta, memory_id]
+                params![delta, delta, delta, memory_id],
             )?;
             Ok(())
         })
@@ -316,7 +321,7 @@ impl MemoryStore {
                  SET last_validated = datetime('now'),
                      updated_at = datetime('now')
                  WHERE id = ?",
-                params![memory_id]
+                params![memory_id],
             )?;
             Ok(())
         })
@@ -330,13 +335,17 @@ impl MemoryStore {
                      last_accessed = datetime('now'),
                      updated_at = datetime('now')
                  WHERE id = ?",
-                params![memory_id]
+                params![memory_id],
             )?;
             Ok(())
         })
     }
 
-    pub fn get_by_confidence_threshold(&self, workspace_id: i64, threshold: f64) -> Result<Vec<Memory>> {
+    pub fn get_by_confidence_threshold(
+        &self,
+        workspace_id: i64,
+        threshold: f64,
+    ) -> Result<Vec<Memory>> {
         self.db.execute(|conn| {
             let mut stmt = conn.prepare(
                 "SELECT id, workspace_id, agent_id, text, tags, importance_score, access_count,
@@ -344,9 +353,9 @@ impl MemoryStore {
                         source_episodes, confidence, last_validated, created_at, updated_at
                  FROM memories 
                  WHERE workspace_id = ? AND confidence >= ?
-                 ORDER BY confidence DESC"
+                 ORDER BY confidence DESC",
             )?;
-            
+
             let rows = stmt.query_map(params![workspace_id, threshold], |row| {
                 Ok(Memory {
                     id: Some(row.get(0)?),
@@ -360,7 +369,8 @@ impl MemoryStore {
                     conversation_id: row.get(8)?,
                     parent_memory_id: row.get(9)?,
                     user_feedback: row.get(10)?,
-                    source_episodes: row.get::<_, Option<String>>(11)?
+                    source_episodes: row
+                        .get::<_, Option<String>>(11)?
                         .and_then(|s| serde_json::from_str(&s).ok())
                         .unwrap_or_default(),
                     confidence: row.get::<_, Option<f64>>(12)?.unwrap_or(0.5),
@@ -369,7 +379,7 @@ impl MemoryStore {
                     updated_at: Some(row.get(15)?),
                 })
             })?;
-            
+
             Ok(rows.filter_map(Result::ok).collect())
         })
     }

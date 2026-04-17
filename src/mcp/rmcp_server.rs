@@ -1,11 +1,10 @@
-use crate::{WorkspaceManager, ModelType, MemorySystem};
 use crate::services::memory_manager::MemoryManager;
+use crate::{MemorySystem, ModelType, WorkspaceManager};
 use anyhow::Result;
 use rmcp::{
     model::{
-        CallToolRequestParam, CallToolResult, Content, ErrorCode, ErrorData,
-        ListToolsResult, PaginatedRequestParam, ServerCapabilities,
-        ServerInfo, Tool,
+        CallToolRequestParam, CallToolResult, Content, ErrorCode, ErrorData, ListToolsResult,
+        PaginatedRequestParam, ServerCapabilities, ServerInfo, Tool,
     },
     service::{RequestContext, RoleServer},
     ServerHandler,
@@ -26,7 +25,7 @@ impl MemoryMcpServer {
     pub fn new(workspace_name: &str, model_type: ModelType) -> Result<Self> {
         let manager = WorkspaceManager::new(model_type)?;
         let memory_system = manager.get_or_create_workspace(workspace_name)?;
-        
+
         // Get the workspace ID
         let workspace_id = memory_system.database().execute(|conn| {
             let id: i64 = conn.query_row(
@@ -36,12 +35,12 @@ impl MemoryMcpServer {
             )?;
             Ok(id)
         })?;
-        
+
         // Create MemoryManager using the SAME database and embedder
         let db = memory_system.database().clone();
         let embedder = memory_system.embedder();
         let memory_manager = Arc::new(MemoryManager::with_embedder(db, embedder));
-        
+
         Ok(Self {
             memory_system: Arc::new(Mutex::new(memory_system)),
             memory_manager,
@@ -49,59 +48,90 @@ impl MemoryMcpServer {
             initialized: Arc::new(Mutex::new(false)),
         })
     }
-    
+
     /// Ensure model is loaded on first use
     async fn ensure_initialized(&self) -> Result<(), ErrorData> {
         use std::fs::OpenOptions;
         use std::io::Write;
-        
+
         let log_path = "/tmp/mcp-memory-debug.log";
-        let mut log = OpenOptions::new().create(true).append(true).open(log_path).ok();
-        
+        let mut log = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(log_path)
+            .ok();
+
         if let Some(ref mut f) = log {
-            let _ = writeln!(f, "[{}] ensure_initialized called", chrono::Local::now().format("%H:%M:%S%.3f"));
+            let _ = writeln!(
+                f,
+                "[{}] ensure_initialized called",
+                chrono::Local::now().format("%H:%M:%S%.3f")
+            );
         }
-        
+
         let mut init = self.initialized.lock().await;
-        
+
         if let Some(ref mut f) = log {
-            let _ = writeln!(f, "[{}] Lock acquired, initialized={}", chrono::Local::now().format("%H:%M:%S%.3f"), *init);
+            let _ = writeln!(
+                f,
+                "[{}] Lock acquired, initialized={}",
+                chrono::Local::now().format("%H:%M:%S%.3f"),
+                *init
+            );
         }
-        
+
         if !*init {
             *init = true;
             drop(init);
-            
+
             if let Some(ref mut f) = log {
-                let _ = writeln!(f, "[{}] Starting model load...", chrono::Local::now().format("%H:%M:%S%.3f"));
+                let _ = writeln!(
+                    f,
+                    "[{}] Starting model load...",
+                    chrono::Local::now().format("%H:%M:%S%.3f")
+                );
             }
-            
+
             // Load embedding model
             tracing::info!("Loading embedding model on first use...");
             let system = self.memory_system.lock().await;
-            
+
             if let Some(ref mut f) = log {
-                let _ = writeln!(f, "[{}] System lock acquired, calling load_model...", chrono::Local::now().format("%H:%M:%S%.3f"));
+                let _ = writeln!(
+                    f,
+                    "[{}] System lock acquired, calling load_model...",
+                    chrono::Local::now().format("%H:%M:%S%.3f")
+                );
             }
-            
-            system.load_model().map_err(|e| ErrorData::new(
-                ErrorCode::INTERNAL_ERROR,
-                format!("Failed to load model: {}", e),
-                None,
-            ))?;
-            
+
+            system.load_model().map_err(|e| {
+                ErrorData::new(
+                    ErrorCode::INTERNAL_ERROR,
+                    format!("Failed to load model: {}", e),
+                    None,
+                )
+            })?;
+
             if let Some(ref mut f) = log {
-                let _ = writeln!(f, "[{}] Model loaded successfully!", chrono::Local::now().format("%H:%M:%S%.3f"));
+                let _ = writeln!(
+                    f,
+                    "[{}] Model loaded successfully!",
+                    chrono::Local::now().format("%H:%M:%S%.3f")
+                );
             }
-            
+
             drop(system);
             tracing::info!("Model loaded successfully");
         }
-        
+
         if let Some(ref mut f) = log {
-            let _ = writeln!(f, "[{}] ensure_initialized complete", chrono::Local::now().format("%H:%M:%S%.3f"));
+            let _ = writeln!(
+                f,
+                "[{}] ensure_initialized complete",
+                chrono::Local::now().format("%H:%M:%S%.3f")
+            );
         }
-        
+
         Ok(())
     }
 }
@@ -151,14 +181,13 @@ fn default_limit() -> usize {
 impl ServerHandler for MemoryMcpServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
-            capabilities: ServerCapabilities::builder()
-                .enable_tools()
-                .build(),
+            capabilities: ServerCapabilities::builder().enable_tools().build(),
             instructions: Some(
                 "Memory-RS: Persistent memory with semantic search. \
                 All memories are AUTOMATICALLY indexed with MiniLM 384d embeddings. \
                 Memories MUST include text content. \
-                Memories are scoped to current workspace and persist across sessions.".to_string(),
+                Memories are scoped to current workspace and persist across sessions."
+                    .to_string(),
             ),
             ..Default::default()
         }
@@ -257,44 +286,56 @@ impl ServerHandler for MemoryMcpServer {
     ) -> Result<CallToolResult, ErrorData> {
         // Ensure model is loaded BEFORE acquiring any locks
         self.ensure_initialized().await?;
-        
+
         let system = self.memory_system.lock().await;
 
         match request.name.as_ref() {
             "learn" => {
-                let args = request.arguments
-                    .ok_or_else(|| ErrorData::new(ErrorCode::INVALID_PARAMS, "Missing arguments", None))?;
+                let args = request.arguments.ok_or_else(|| {
+                    ErrorData::new(ErrorCode::INVALID_PARAMS, "Missing arguments", None)
+                })?;
                 let input: LearnInput = serde_json::from_value(serde_json::Value::Object(args))
-                    .map_err(|e| ErrorData::new(
-                        ErrorCode::INVALID_PARAMS,
-                        format!("Invalid input: {}", e),
-                        None,
-                    ))?;
+                    .map_err(|e| {
+                        ErrorData::new(
+                            ErrorCode::INVALID_PARAMS,
+                            format!("Invalid input: {}", e),
+                            None,
+                        )
+                    })?;
 
                 let importance = input.importance_score.unwrap_or(0.5);
-                
+
                 // Store as Episode
                 let episode = crate::models::dtos::Episode {
                     id: None,
                     workspace_id: self.workspace_id,
                     agent_id: input.agent_id,
-                    timestamp: input.timestamp.unwrap_or_else(|| chrono::Local::now().to_rfc3339()),
+                    timestamp: input
+                        .timestamp
+                        .unwrap_or_else(|| chrono::Local::now().to_rfc3339()),
                     conversation_id: input.conversation_id.clone(),
                     event_type: input.event_type,
-                    context: input.context.unwrap_or_else(|| serde_json::json!({"text": input.text.clone()})),
+                    context: input
+                        .context
+                        .unwrap_or_else(|| serde_json::json!({"text": input.text.clone()})),
                     outcome: None,
                     valence: None,
                     archived: false,
                     created_at: None,
                 };
-                
-                let episode_id = self.memory_manager.store_episode(episode).await
-                    .map_err(|e| ErrorData::new(
-                        ErrorCode::INTERNAL_ERROR,
-                        format!("Failed to store episode: {}", e),
-                        None,
-                    ))?;
-                
+
+                let episode_id = self
+                    .memory_manager
+                    .store_episode(episode)
+                    .await
+                    .map_err(|e| {
+                        ErrorData::new(
+                            ErrorCode::INTERNAL_ERROR,
+                            format!("Failed to store episode: {}", e),
+                            None,
+                        )
+                    })?;
+
                 // Optionally store in semantic memory if high importance
                 let memory_id = if importance > 0.7 {
                     let memory = crate::storage::Memory {
@@ -315,50 +356,64 @@ impl ServerHandler for MemoryMcpServer {
                         created_at: None,
                         updated_at: None,
                     };
-                    
-                    Some(system.learn(&memory).map_err(|e| ErrorData::new(
-                        ErrorCode::INTERNAL_ERROR,
-                        format!("Failed to learn: {}", e),
-                        None,
-                    ))?)
+
+                    Some(system.learn(&memory).map_err(|e| {
+                        ErrorData::new(
+                            ErrorCode::INTERNAL_ERROR,
+                            format!("Failed to learn: {}", e),
+                            None,
+                        )
+                    })?)
                 } else {
                     None
                 };
-                
+
                 // Drop lock before async operation
                 drop(system);
 
-                Ok(CallToolResult::success(vec![Content::text(json!({
-                    "episode_id": episode_id,
-                    "memory_id": memory_id,
-                    "status": "success"
-                }).to_string())]))
+                Ok(CallToolResult::success(vec![Content::text(
+                    json!({
+                        "episode_id": episode_id,
+                        "memory_id": memory_id,
+                        "status": "success"
+                    })
+                    .to_string(),
+                )]))
             }
             "search" => {
-                let args = request.arguments
-                    .ok_or_else(|| ErrorData::new(ErrorCode::INVALID_PARAMS, "Missing arguments", None))?;
+                let args = request.arguments.ok_or_else(|| {
+                    ErrorData::new(ErrorCode::INVALID_PARAMS, "Missing arguments", None)
+                })?;
                 let input: SearchInput = serde_json::from_value(serde_json::Value::Object(args))
-                    .map_err(|e| ErrorData::new(
-                        ErrorCode::INVALID_PARAMS,
-                        format!("Invalid input: {}", e),
-                        None,
-                    ))?;
+                    .map_err(|e| {
+                        ErrorData::new(
+                            ErrorCode::INVALID_PARAMS,
+                            format!("Invalid input: {}", e),
+                            None,
+                        )
+                    })?;
 
                 // Drop system lock, use manager for hierarchical retrieval
                 drop(system);
-                
-                let results = self.memory_manager
+
+                let results = self
+                    .memory_manager
                     .retrieve_hierarchical(&input.query, self.workspace_id, input.limit.min(100))
-                    .map_err(|e| ErrorData::new(
-                        ErrorCode::INTERNAL_ERROR,
-                        format!("Failed to search: {}", e),
-                        None,
-                    ))?;
-                
-                Ok(CallToolResult::success(vec![Content::text(json!({
-                    "results": results,
-                    "count": results.len()
-                }).to_string())]))
+                    .map_err(|e| {
+                        ErrorData::new(
+                            ErrorCode::INTERNAL_ERROR,
+                            format!("Failed to search: {}", e),
+                            None,
+                        )
+                    })?;
+
+                Ok(CallToolResult::success(vec![Content::text(
+                    json!({
+                        "results": results,
+                        "count": results.len()
+                    })
+                    .to_string(),
+                )]))
             }
             _ => Err(ErrorData::new(
                 ErrorCode::METHOD_NOT_FOUND,

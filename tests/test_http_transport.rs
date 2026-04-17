@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader, Write};
+use std::net::TcpStream;
 use std::process::{Command, Stdio};
 use std::time::Duration;
-use std::net::TcpStream;
 
 const BIN: &str = env!("CARGO_BIN_EXE_agent-memory-mcp");
 
@@ -71,7 +71,11 @@ fn test_stdio_learn_and_search() {
     let _ = read_response(&mut stdout);
 
     // Send initialized notification
-    writeln!(stdin, r#"{{"jsonrpc":"2.0","method":"notifications/initialized"}}"#).unwrap();
+    writeln!(
+        stdin,
+        r#"{{"jsonrpc":"2.0","method":"notifications/initialized"}}"#
+    )
+    .unwrap();
     stdin.flush().unwrap();
 
     // Learn
@@ -81,9 +85,8 @@ fn test_stdio_learn_and_search() {
 
     let resp = read_response(&mut stdout);
     assert_eq!(resp["id"], 2);
-    let content: serde_json::Value = serde_json::from_str(
-        resp["result"]["content"][0]["text"].as_str().unwrap()
-    ).unwrap();
+    let content: serde_json::Value =
+        serde_json::from_str(resp["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
     assert_eq!(content["status"], "success");
 
     // Search
@@ -93,9 +96,8 @@ fn test_stdio_learn_and_search() {
 
     let resp = read_response(&mut stdout);
     assert_eq!(resp["id"], 3);
-    let content: serde_json::Value = serde_json::from_str(
-        resp["result"]["content"][0]["text"].as_str().unwrap()
-    ).unwrap();
+    let content: serde_json::Value =
+        serde_json::from_str(resp["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
     assert!(content["count"].as_u64().unwrap() > 0);
 
     drop(stdin);
@@ -127,7 +129,10 @@ fn test_http_initialize() {
         .spawn()
         .expect("failed to start HTTP server");
 
-    assert!(wait_for_port(port, Duration::from_secs(10)), "HTTP server didn't start");
+    assert!(
+        wait_for_port(port, Duration::from_secs(10)),
+        "HTTP server didn't start"
+    );
 
     let client = reqwest::blocking::Client::new();
     let resp = client
@@ -161,7 +166,10 @@ fn test_http_learn_and_search() {
         .spawn()
         .expect("failed to start HTTP server");
 
-    assert!(wait_for_port(port, Duration::from_secs(10)), "HTTP server didn't start");
+    assert!(
+        wait_for_port(port, Duration::from_secs(10)),
+        "HTTP server didn't start"
+    );
 
     let client = reqwest::blocking::Client::new();
     let base = format!("http://127.0.0.1:{}/mcp", port);
@@ -175,7 +183,8 @@ fn test_http_learn_and_search() {
         .send()
         .unwrap();
 
-    let session_id = resp.headers()
+    let session_id = resp
+        .headers()
         .get("mcp-session-id")
         .map(|v| v.to_str().unwrap().to_string());
 
@@ -202,9 +211,8 @@ fn test_http_learn_and_search() {
     let resp = req.send().unwrap();
     let body = resp.text().unwrap();
     let json = parse_sse_response(&body);
-    let content: serde_json::Value = serde_json::from_str(
-        json["result"]["content"][0]["text"].as_str().unwrap()
-    ).unwrap();
+    let content: serde_json::Value =
+        serde_json::from_str(json["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
     assert_eq!(content["status"], "success");
 
     // Search
@@ -219,9 +227,8 @@ fn test_http_learn_and_search() {
     let resp = req.send().unwrap();
     let body = resp.text().unwrap();
     let json = parse_sse_response(&body);
-    let content: serde_json::Value = serde_json::from_str(
-        json["result"]["content"][0]["text"].as_str().unwrap()
-    ).unwrap();
+    let content: serde_json::Value =
+        serde_json::from_str(json["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
     assert!(content["count"].as_u64().unwrap() > 0);
 
     child.kill().unwrap();
