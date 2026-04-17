@@ -23,7 +23,7 @@ jobs:
         run: cargo build --release
 
       - name: Run tests
-        run: cargo test --test-threads=1
+        run: cargo test -- --test-threads=1
 
   clippy:
     runs-on: ubuntu-latest
